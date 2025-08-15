@@ -22,14 +22,12 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   >([]);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Existe algum filtro ativo?
   const hasActiveFilters = useMemo(
     () =>
       !!(selectedState || selectedCity || selectedStatus || searchTerm.trim()),
     [selectedState, selectedCity, selectedStatus, searchTerm]
   );
 
-  // Contagem atual conforme filtros (usada somente quando há filtro ativo)
   const filteredCount = useMemo(() => {
     return allTournaments.filter((t) => {
       const byState = !selectedState || t.location.state === selectedState;
@@ -47,7 +45,6 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   }, [selectedState, selectedCity, selectedStatus, searchTerm]);
 
   useEffect(() => {
-    // Estados com contagem
     const statesWithCounts = allTournaments.reduce((acc, tournament) => {
       const state = tournament.location.state;
       if (!acc[state]) {
@@ -69,7 +66,6 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   }, []);
 
   useEffect(() => {
-    // Cidades com contagem, dependente do estado selecionado
     const filteredTournaments = selectedState
       ? allTournaments.filter((t) => t.location.state === selectedState)
       : allTournaments;
@@ -106,7 +102,6 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
       status: selectedStatus,
       search: searchTerm,
     });
-    // IMPORTANTE: não incluir onFilterChange nas dependências para evitar loop de renders
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedState, selectedCity, selectedStatus, searchTerm]);
 
@@ -119,21 +114,22 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
-      <div className="flex justify-between items-center mb-6">
+    <div
+      className={`bg-white rounded-xl shadow-lg border border-gray-100
+                  p-4 md:p-6 mb-6 ${isOpen ? "pb-4" : "pb-3"}`}
+    >
+      {/* Cabeçalho */}
+      <div className="flex justify-between items-center mb-3">
         <div className="flex items-center">
-          <h2 className="text-xl font-bold text-dark-800 flex items-center">
+          <h2 className="text-lg md:text-xl font-bold text-dark-800 flex items-center">
             <Filter size={20} className="mr-2 text-primary-600" />
             Filtrar Torneios
           </h2>
 
-          {/* Mostra o badge apenas quando há filtros ativos */}
           {hasActiveFilters && (
             <span
-              className="ml-3 inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-sm font-semibold
+              className="ml-3 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs md:text-sm font-semibold
                          bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary-200"
-              aria-label="Quantidade de torneios filtrados"
-              title="Quantidade de torneios filtrados"
             >
               {filteredCount}
             </span>
@@ -141,7 +137,6 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Mostra 'Limpar seleção' apenas quando há filtros ativos */}
           {hasActiveFilters && (
             <button
               type="button"
@@ -153,16 +148,27 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
           )}
 
           <button
+            type="button"
             className="md:hidden text-primary-600 font-semibold"
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => setIsOpen((v) => !v)}
+            aria-expanded={isOpen}
+            aria-controls="filters-content"
           >
             {isOpen ? "Fechar" : "Abrir"}
           </button>
         </div>
       </div>
 
-      <div className={`${isOpen ? "block" : "hidden"} md:block`}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Conteúdo com collapse em max-height (funciona melhor no mobile) */}
+      <div
+        id="filters-content"
+        className={`
+          transition-[max-height] duration-300 ease-in-out
+          ${isOpen ? "max-h-[1200px]" : "max-h-0 overflow-hidden"}
+          md:max-h-none md:overflow-visible
+        `}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <div className="flex flex-col">
             <label className="text-sm font-semibold text-dark-700 mb-2">
               Estado
@@ -245,7 +251,6 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
               />
             </div>
 
-            {/* Mobile: mostrar 'Limpar seleção' só quando houver filtros ativos */}
             {hasActiveFilters && (
               <button
                 type="button"
