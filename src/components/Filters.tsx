@@ -106,7 +106,9 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
       status: selectedStatus,
       search: searchTerm,
     });
-  }, [selectedState, selectedCity, selectedStatus, searchTerm, onFilterChange]);
+    // IMPORTANTE: não incluir onFilterChange nas dependências para evitar loop de renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedState, selectedCity, selectedStatus, searchTerm]);
 
   const handleClear = () => {
     setSelectedState("");

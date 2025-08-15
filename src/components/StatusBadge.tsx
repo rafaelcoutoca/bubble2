@@ -1,60 +1,36 @@
-import React from 'react';
-import { TournamentStatus } from '../types';
+import React from "react";
+import { TournamentStatus } from "../types";
 
 interface StatusBadgeProps {
   status: TournamentStatus;
 }
 
+/**
+ * Badge de STATUS em texto simples (sem fundo), com cores:
+ * - open         → verde
+ * - closed       → amarelo (bom contraste no branco)
+ * - in-progress  → azul
+ * - completed    → cinza (Encerrado)
+ */
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
-  const getStatusConfig = (status: TournamentStatus) => {
-    switch (status) {
-      case 'open':
-        return {
-          text: 'Inscrições Abertas',
-          bgColor: 'bg-accent-100',
-          textColor: 'text-accent-800',
-          borderColor: 'border-accent-200'
-        };
-      case 'closed':
-        return {
-          text: 'Inscrições Encerradas',
-          bgColor: 'bg-yellow-100',
-          textColor: 'text-yellow-800',
-          borderColor: 'border-yellow-200'
-        };
-      case 'in-progress':
-        return {
-          text: 'Em Andamento',
-          bgColor: 'bg-primary-100',
-          textColor: 'text-primary-800',
-          borderColor: 'border-primary-200'
-        };
-      case 'completed':
-        return {
-          text: 'Concluído',
-          bgColor: 'bg-dark-100',
-          textColor: 'text-dark-800',
-          borderColor: 'border-dark-200'
-        };
+  const getConfig = (s: TournamentStatus) => {
+    switch (s) {
+      case "open":
+        return { text: "Inscrições Abertas", cls: "text-green-600" };
+      case "closed":
+        return { text: "Inscrições Encerradas", cls: "text-amber-600" };
+      case "in-progress":
+        return { text: "Em Andamento", cls: "text-blue-600" };
+      case "completed":
+        return { text: "Encerrado", cls: "text-gray-600" };
       default:
-        return {
-          text: 'Status Desconhecido',
-          bgColor: 'bg-dark-100',
-          textColor: 'text-dark-800',
-          borderColor: 'border-dark-200'
-        };
+        return { text: "Status Desconhecido", cls: "text-gray-600" };
     }
   };
 
-  const { text, bgColor, textColor, borderColor } = getStatusConfig(status);
+  const { text, cls } = getConfig(status);
 
-  return (
-    <span 
-      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${bgColor} ${textColor} border ${borderColor}`}
-    >
-      {text}
-    </span>
-  );
+  return <span className={`text-xs font-semibold ${cls}`}>{text}</span>;
 };
 
 export default StatusBadge;

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import TournamentCard from './TournamentCard';
-import { Tournament, LocationFilter } from '../types';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import TournamentCard from "./TournamentCard";
+import { Tournament, LocationFilter } from "../types";
+import { useAuth } from "../contexts/AuthContext";
 
 interface TournamentListProps {
   filters: LocationFilter;
@@ -10,69 +10,69 @@ interface TournamentListProps {
 }
 
 const TournamentList: React.FC<TournamentListProps> = ({ filters, limit }) => {
-  const [filteredTournaments, setFilteredTournaments] = useState<Tournament[]>([]);
+  const [filteredTournaments, setFilteredTournaments] = useState<Tournament[]>(
+    []
+  );
   const [isLoading, setIsLoading] = useState(false);
   const { user, profile } = useAuth();
 
   useEffect(() => {
     setIsLoading(true);
-    
-    // Get tournaments ONLY from localStorage (created by clubs)
-    const clubTournaments = JSON.parse(localStorage.getItem('clubTournaments') || '[]');
-    
-    // Convert club tournaments to the Tournament format
-    const convertedClubTournaments: Tournament[] = clubTournaments.map((tournament: any) => ({
-      id: tournament.id,
-      name: tournament.name,
-      club: tournament.mainClub || 'Clube',
-      location: {
-        city: tournament.location?.city || tournament.city || 'São Paulo',
-        state: tournament.location?.state || tournament.state || 'SP'
-      },
-      date: tournament.startDate,
-      status: tournament.status === 'scheduled' ? 'open' : tournament.status,
-      participantsCount: tournament.participantsCount || 0
-    }));
-    
-    // Apply filters to club tournaments only
+
+    const clubTournaments = JSON.parse(
+      localStorage.getItem("clubTournaments") || "[]"
+    );
+
+    const convertedClubTournaments: Tournament[] = clubTournaments.map(
+      (t: any) => ({
+        id: t.id,
+        name: t.name,
+        club: t.mainClub || "Clube",
+        location: {
+          city: t.location?.city || t.city || "São Paulo",
+          state: t.location?.state || t.state || "SP",
+        },
+        // Agora passamos PERÍODO completo
+        startDate: t.startDate,
+        endDate: t.endDate,
+        // compat legado
+        date: t.startDate,
+        // status normalizado
+        status: t.status === "scheduled" ? "open" : t.status,
+        participantsCount: t.participantsCount || 0,
+        // novo: esporte
+        sport: t.sport || "Padel",
+      })
+    );
+
     let result = [...convertedClubTournaments];
-    
-    // Filter by search term
+
     if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      result = result.filter(tournament => 
-        tournament.name.toLowerCase().includes(searchLower) ||
-        tournament.club.toLowerCase().includes(searchLower)
+      const s = filters.search.toLowerCase();
+      result = result.filter(
+        (tr) =>
+          tr.name.toLowerCase().includes(s) || tr.club.toLowerCase().includes(s)
       );
     }
-    
-    // Filter by state if selected
-    if (filters.state) {
-      result = result.filter(tournament => tournament.location.state === filters.state);
-    }
-    
-    // Filter by city if selected
-    if (filters.city) {
-      result = result.filter(tournament => tournament.location.city === filters.city);
-    }
+    if (filters.state)
+      result = result.filter((tr) => tr.location.state === filters.state);
+    if (filters.city)
+      result = result.filter((tr) => tr.location.city === filters.city);
+    if (filters.status)
+      result = result.filter((tr) => tr.status === filters.status);
 
-    // Filter by status if selected
-    if (filters.status) {
-      result = result.filter(tournament => tournament.status === filters.status);
-    }
-    
-    // Sort by date and status (completed tournaments at the end)
+    // Ordena por startDate; completed no fim
     result.sort((a, b) => {
-      if (a.status === 'completed' && b.status !== 'completed') return 1;
-      if (a.status !== 'completed' && b.status === 'completed') return -1;
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
+      if (a.status === "completed" && b.status !== "completed") return 1;
+      if (a.status !== "completed" && b.status === "completed") return -1;
+      return (
+        new Date(a.startDate || a.date || 0).getTime() -
+        new Date(b.startDate || b.date || 0).getTime()
+      );
     });
 
-    // Apply limit if specified
-    if (limit) {
-      result = result.slice(0, limit);
-    }
-    
+    if (limit) result = result.slice(0, limit);
+
     setFilteredTournaments(result);
     setIsLoading(false);
   }, [filters, limit]);
@@ -88,16 +88,18 @@ const TournamentList: React.FC<TournamentListProps> = ({ filters, limit }) => {
   if (filteredTournaments.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-lg p-8 text-center border border-gray-100">
-        <h3 className="text-xl font-semibold text-dark-700 mb-2">Nenhum torneio encontrado</h3>
+        <h3 className="text-xl font-semibold text-dark-700 mb-2">
+          Nenhum torneio encontrado
+        </h3>
         <p className="text-dark-500 mb-4">
-          {JSON.parse(localStorage.getItem('clubTournaments') || '[]').length === 0 
-            ? 'Ainda não há torneios criados pelos clubes.' 
-            : 'Tente ajustar seus filtros ou busque em outra região.'}
+          {JSON.parse(localStorage.getItem("clubTournaments") || "[]")
+            .length === 0
+            ? "Ainda não há torneios criados pelos clubes."
+            : "Tente ajustar seus filtros ou busque em outra região."}
         </p>
-        {/* Only show "Create Tournament" button if user is logged in and is a club */}
-        {user && profile?.user_type === 'club' && (
-          <Link 
-            to="/create-tournament" 
+        {user && profile?.user_type === "club" && (
+          <Link
+            to="/create-tournament"
             className="inline-flex items-center bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors"
           >
             Criar Primeiro Torneio
@@ -110,7 +112,11 @@ const TournamentList: React.FC<TournamentListProps> = ({ filters, limit }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {filteredTournaments.map((tournament) => (
-        <Link key={tournament.id} to={`/tournament/${tournament.id}`} className="block">
+        <Link
+          key={tournament.id}
+          to={`/tournament/${tournament.id}`}
+          className="block"
+        >
           <TournamentCard tournament={tournament} />
         </Link>
       ))}

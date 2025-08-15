@@ -1,4 +1,4 @@
-export type TournamentStatus = 'open' | 'closed' | 'in-progress' | 'completed';
+export type TournamentStatus = "open" | "closed" | "in-progress" | "completed";
 
 export interface Tournament {
   id: string;
@@ -8,7 +8,17 @@ export interface Tournament {
     city: string;
     state: string;
   };
-  date: string;
+
+  // Intervalo de datas (preferencial)
+  startDate: string; // ex.: "2025-08-14"
+  endDate?: string; // ex.: "2025-08-16" (opcional)
+
+  // Compatibilidade com código legado
+  date?: string;
+
+  // Novo: esporte do torneio
+  sport?: string;
+
   status: TournamentStatus;
   participantsCount: number;
 }
@@ -16,6 +26,6 @@ export interface Tournament {
 export interface LocationFilter {
   state: string;
   city: string;
-  status: TournamentStatus | '';
+  status: TournamentStatus | "";
   search: string;
 }
