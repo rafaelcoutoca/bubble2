@@ -96,12 +96,17 @@ const Navbar: React.FC = () => {
               >
                 Torneios
               </Link>
-              <a
-                href="#"
-                className="text-dark-600 hover:text-primary-900 font-medium transition-colors"
+              <Link
+                to="/clubes"
+                className={`${
+                  isActive("/clubes")
+                    ? "text-primary-900 font-semibold"
+                    : "text-dark-600"
+                } hover:text-primary-900 font-medium transition-colors`}
               >
                 Clubes
-              </a>
+              </Link>
+
               <Link
                 to="/contact"
                 className={`${
@@ -199,13 +204,18 @@ const Navbar: React.FC = () => {
           >
             Torneios
           </Link>
-          <a
-            href="#"
-            className="block text-lg text-dark-700 hover:text-primary-900 transition-colors"
+          <Link
+            to="/clubes"
             onClick={() => setIsOpen(false)}
+            className={`block text-lg ${
+              isActive("/clubes")
+                ? "text-primary-900 font-semibold"
+                : "text-dark-700"
+            } hover:text-primary-900 transition-colors`}
           >
             Clubes
-          </a>
+          </Link>
+
           <Link
             to="/contact"
             onClick={() => setIsOpen(false)}
