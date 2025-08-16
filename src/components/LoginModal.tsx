@@ -42,20 +42,31 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const modalRef = useRef<HTMLDivElement>(null);
   const { refreshProfile } = useAuth();
 
+  // Sincroniza modo inicial e fecha ao clicar fora
   useEffect(() => {
-    if (isOpen) {
-      setIsLogin(defaultMode !== "signup");
-      resetForm(true);
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [isOpen, defaultMode]);
+    if (!isOpen) return;
+    setIsLogin(defaultMode !== "signup");
+    resetForm(true);
 
-  const handleClickOutside = (event: MouseEvent) => {
-    if (modalRef.current && !modalRef.current.contains(event.target as Node))
-      onClose();
-  };
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        onClose();
+      }
+    };
+
+    // trava o scroll do body enquanto o modal estiver aberto
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, defaultMode, onClose]);
 
   if (!isOpen) return null;
 
@@ -116,8 +127,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
     try {
       if (isLogin) {
         const { user, profile } = await signIn(email, password);
-
-        // força o user_type pelos e-mails especiais
         const forced = forceRoleFromEmail(email);
         const nextType = forced ?? profile?.user_type;
 
@@ -203,43 +212,42 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   return (
     <>
-      {/* Overlay acima de tudo */}
+      {/* OVERLAY – acima do header/drawer */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-[1px] z-[140]"
+        className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="fixed inset-0 z-[150] flex items-start md:items-center justify-center overflow-y-auto p-4">
+      {/* WRAPPER do modal */}
+      <div
+        className="fixed inset-0 z-[310] flex items-center justify-center p-4 md:p-6"
+        role="dialog"
+        aria-modal="true"
+      >
         <div
           ref={modalRef}
-          className={`bg-white rounded-2xl p-8 w-full max-w-md relative shadow-2xl border border-gray-100 ${
-            isLogin
-              ? "max-h-[90vh] overflow-y-auto"
-              : "max-h-[95vh] overflow-y-auto"
-          }`}
-          style={{
-            marginTop: isLogin ? "auto" : "2rem",
-            marginBottom: isLogin ? "auto" : "2rem",
-          }}
+          className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-gray-100 px-5 md:px-6 py-6 md:py-7 max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
         >
+          {/* Botão fechar com área maior */}
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 text-dark-400 hover:text-dark-600 transition-colors"
+            className="absolute right-2 top-2 rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
             aria-label="Fechar"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
 
-          <div className="flex items-center justify-center mb-6">
-            <div className="relative mr-3">
-              <BubbleLogo size={32} className="text-accent-500" />
-            </div>
+          {/* LOGO: oculta no mobile para não competir com o header, mostra no >=sm */}
+          <div className="hidden sm:flex items-center justify-center mb-4">
+            <BubbleLogo size={32} className="text-accent-500 mr-2" />
             <span className="text-2xl font-black bg-gradient-to-r from-primary-900 to-accent-500 bg-clip-text text-transparent">
               Bubble
             </span>
           </div>
 
-          <h2 className="text-2xl font-bold text-dark-800 mb-6 text-center">
+          {/* Título */}
+          <h2 className="text-center text-xl md:text-2xl font-bold text-dark-800 mb-4 md:mb-6">
             {isLogin ? "Entrar na plataforma" : "Criar sua conta"}
           </h2>
 
@@ -249,23 +257,24 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </div>
           )}
 
+          {/* Passo 1 do cadastro: escolher tipo (mobile-friendly) */}
           {!isLogin && !showForm && (
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-dark-700 mb-4 text-center">
+              <label className="block text-sm font-semibold text-dark-700 mb-3 text-center">
                 Escolha o tipo de conta
               </label>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <button
                   type="button"
                   onClick={() => handleUserTypeSelect("athlete")}
-                  className="w-full flex items-center justify-center p-6 border-2 border-gray-200 rounded-xl transition-all hover:border-primary-300 hover:bg-primary-50 group"
+                  className="w-full flex items-center justify-center p-5 border-2 border-gray-200 rounded-xl transition-all hover:border-primary-300 hover:bg-primary-50 group"
                 >
                   <User
-                    size={48}
+                    size={44}
                     className="mr-4 text-primary-600 group-hover:text-primary-700"
                   />
                   <div className="text-left">
-                    <span className="block text-xl font-bold text-dark-800 group-hover:text-primary-900">
+                    <span className="block text-lg font-bold text-dark-800 group-hover:text-primary-900">
                       Atleta
                     </span>
                     <span className="block text-sm text-dark-500">
@@ -276,14 +285,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleUserTypeSelect("club")}
-                  className="w-full flex items-center justify-center p-6 border-2 border-gray-200 rounded-xl transition-all hover:border-primary-300 hover:bg-primary-50 group"
+                  className="w-full flex items-center justify-center p-5 border-2 border-gray-200 rounded-xl transition-all hover:border-primary-300 hover:bg-primary-50 group"
                 >
                   <Building2
-                    size={48}
+                    size={44}
                     className="mr-4 text-primary-600 group-hover:text-primary-700"
                   />
                   <div className="text-left">
-                    <span className="block text-xl font-bold text-dark-800 group-hover:text-primary-900">
+                    <span className="block text-lg font-bold text-dark-800 group-hover:text-primary-900">
                       Clube
                     </span>
                     <span className="block text-sm text-dark-500">
@@ -298,8 +307,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
           {(isLogin || showForm) && (
             <>
               {!isLogin && showForm && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
+                <div className="mb-4 md:mb-6">
+                  <div className="flex items-center justify-between">
                     <button
                       onClick={handleBackToUserType}
                       className="text-primary-600 hover:text-primary-700 text-sm font-medium"
@@ -309,7 +318,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     <div className="flex items-center">
                       {userType === "athlete" ? (
                         <>
-                          <User size={20} className="text-primary-600 mr-2" />
+                          <User size={18} className="text-primary-600 mr-2" />
                           <span className="text-sm font-semibold text-primary-700">
                             Conta de Atleta
                           </span>
@@ -317,7 +326,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                       ) : (
                         <>
                           <Building2
-                            size={20}
+                            size={18}
                             className="text-primary-600 mr-2"
                           />
                           <span className="text-sm font-semibold text-primary-700">
@@ -532,7 +541,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           )}
 
           {(isLogin || (!isLogin && !showForm)) && (
-            <div className="mt-6 text-center">
+            <div className="mt-5 md:mt-6 text-center">
               <button
                 onClick={handleToggleMode}
                 className="text-primary-600 hover:text-primary-700 text-sm font-semibold"

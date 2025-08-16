@@ -1,29 +1,30 @@
-import React, { useEffect } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import Home from './pages/Home';
-import Tournaments from './pages/Tournaments';
-import TournamentDetail from './pages/TournamentDetail';
-import Contact from './pages/Contact';
-import UserData from './pages/UserData';
-import Dashboard from './pages/Dashboard';
-import ClubDashboard from './pages/ClubDashboard';
-import ClubProfile from './pages/ClubProfile';
-import CreateTournament from './pages/CreateTournament';
-import MyTournaments from './pages/MyTournaments';
-import ClubReports from './pages/ClubReports';
-import MeuCadastro from './pages/MeuCadastro';
-import Settings from './pages/Settings';
-import Marketplace from './pages/Marketplace';
-import Messages from './pages/Messages';
-import Profile from './pages/Profile';
+import React, { useEffect } from "react";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import Home from "./pages/Home";
+import Tournaments from "./pages/Tournaments";
+import TournamentDetail from "./pages/TournamentDetail";
+import Contact from "./pages/Contact";
+import UserData from "./pages/UserData";
+import Dashboard from "./pages/Dashboard";
+import ClubDashboard from "./pages/ClubDashboard";
+import ClubProfile from "./pages/ClubProfile";
+import CreateTournament from "./pages/CreateTournament";
+import MyTournaments from "./pages/MyTournaments";
+import ClubReports from "./pages/ClubReports";
+import MeuCadastro from "./pages/MeuCadastro";
+import Settings from "./pages/Settings";
+import Marketplace from "./pages/Marketplace";
+import Messages from "./pages/Messages";
+import Profile from "./pages/Profile";
+import Clubes from "./pages/Clubes";
 
 // Protected Route Component
-const ProtectedRoute: React.FC<{ children: React.ReactNode; requireAuth?: boolean; allowedUserTypes?: string[] }> = ({ 
-  children, 
-  requireAuth = true, 
-  allowedUserTypes 
-}) => {
+const ProtectedRoute: React.FC<{
+  children: React.ReactNode;
+  requireAuth?: boolean;
+  allowedUserTypes?: string[];
+}> = ({ children, requireAuth = true, allowedUserTypes }) => {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -31,16 +32,21 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requireAuth?: boolea
     if (!loading) {
       if (requireAuth && !user) {
         // Redirect to home if authentication is required but user is not logged in
-        navigate('/', { replace: true });
+        navigate("/", { replace: true });
         return;
       }
 
-      if (user && profile && allowedUserTypes && !allowedUserTypes.includes(profile.user_type)) {
+      if (
+        user &&
+        profile &&
+        allowedUserTypes &&
+        !allowedUserTypes.includes(profile.user_type)
+      ) {
         // Redirect to appropriate dashboard if user type is not allowed
-        if (profile.user_type === 'club') {
-          navigate('/club-dashboard', { replace: true });
+        if (profile.user_type === "club") {
+          navigate("/club-dashboard", { replace: true });
         } else {
-          navigate('/dashboard', { replace: true });
+          navigate("/dashboard", { replace: true });
         }
         return;
       }
@@ -59,7 +65,12 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requireAuth?: boolea
     return null; // Will redirect in useEffect
   }
 
-  if (user && profile && allowedUserTypes && !allowedUserTypes.includes(profile.user_type)) {
+  if (
+    user &&
+    profile &&
+    allowedUserTypes &&
+    !allowedUserTypes.includes(profile.user_type)
+  ) {
     return null; // Will redirect in useEffect
   }
 
@@ -72,12 +83,12 @@ function AppContent() {
   const location = useLocation();
 
   useEffect(() => {
-    if (!loading && user && profile && location.pathname === '/') {
+    if (!loading && user && profile && location.pathname === "/") {
       // Always redirect authenticated users from home page to their dashboard
-      if (profile.user_type === 'club') {
-        navigate('/club-dashboard', { replace: true });
+      if (profile.user_type === "club") {
+        navigate("/club-dashboard", { replace: true });
       } else {
-        navigate('/dashboard', { replace: true });
+        navigate("/dashboard", { replace: true });
       }
     }
   }, [user, profile, loading, navigate, location.pathname]);
@@ -97,95 +108,97 @@ function AppContent() {
       <Route path="/tournament/:id" element={<TournamentDetail />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/user-data" element={<UserData />} />
-      
+      <Route path="/clubes" element={<Clubes />} />
+      <Route path="/clubes/:id" element={<ClubProfile />} />
+
       {/* Protected Routes - Require Authentication */}
-      <Route 
-        path="/dashboard" 
+      <Route
+        path="/dashboard"
         element={
-          <ProtectedRoute allowedUserTypes={['athlete']}>
+          <ProtectedRoute allowedUserTypes={["athlete"]}>
             <Dashboard />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/club-dashboard" 
+      <Route
+        path="/club-dashboard"
         element={
-          <ProtectedRoute allowedUserTypes={['club']}>
+          <ProtectedRoute allowedUserTypes={["club"]}>
             <ClubDashboard />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/club-profile" 
+      <Route
+        path="/club-profile"
         element={
-          <ProtectedRoute allowedUserTypes={['club']}>
+          <ProtectedRoute allowedUserTypes={["club"]}>
             <ClubProfile />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/create-tournament" 
+      <Route
+        path="/create-tournament"
         element={
-          <ProtectedRoute allowedUserTypes={['club']}>
+          <ProtectedRoute allowedUserTypes={["club"]}>
             <CreateTournament />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/my-tournaments" 
+      <Route
+        path="/my-tournaments"
         element={
-          <ProtectedRoute allowedUserTypes={['club']}>
+          <ProtectedRoute allowedUserTypes={["club"]}>
             <MyTournaments />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/club-reports" 
+      <Route
+        path="/club-reports"
         element={
-          <ProtectedRoute allowedUserTypes={['club']}>
+          <ProtectedRoute allowedUserTypes={["club"]}>
             <ClubReports />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/profile" 
+      <Route
+        path="/profile"
         element={
-          <ProtectedRoute allowedUserTypes={['athlete']}>
+          <ProtectedRoute allowedUserTypes={["athlete"]}>
             <Profile />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/settings" 
+      <Route
+        path="/settings"
         element={
           <ProtectedRoute>
             <Settings />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/marketplace" 
+      <Route
+        path="/marketplace"
         element={
           <ProtectedRoute>
             <Marketplace />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/messages" 
+      <Route
+        path="/messages"
         element={
           <ProtectedRoute>
             <Messages />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/meu-cadastro" 
+      <Route
+        path="/meu-cadastro"
         element={
           <ProtectedRoute>
             <MeuCadastro />
           </ProtectedRoute>
-        } 
+        }
       />
     </Routes>
   );
