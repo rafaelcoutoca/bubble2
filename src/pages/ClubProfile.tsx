@@ -1,5 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import DashboardHeader from '../components/DashboardHeader';
+import Navbar from '../components/Navbar';
+import { useAuth } from '../contexts/AuthContext';
+import Footer from '../components/Footer';
 import { 
   Camera, 
   Edit2, 
@@ -14,23 +18,35 @@ import {
   Phone,
   Mail,
   Globe,
-  CheckCircle
+  CheckCircle,
+  Star,
+  Calendar,
+  Dumbbell
 } from 'lucide-react';
 
 const ClubProfile: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [clubData, setClubData] = useState({
-    fantasyName: 'Clube Elite Padel',
-    email: 'contato@clubeelite.com',
+    fantasyName: id === 'clube-aurora' ? 'Clube Aurora Padel' : 'Clube Elite Padel',
+    email: id === 'clube-aurora' ? 'contato@clubeaurora.com' : 'contato@clubeelite.com',
     cnpj: '12.345.678/0001-90',
-    phone: '(11) 9 9999-9999',
-    city: 'São Paulo',
+    phone: id === 'clube-aurora' ? '(11) 9999-1234' : '(11) 9 9999-9999',
+    city: id === 'clube-aurora' ? 'São Paulo' : 'São Paulo',
     state: 'SP',
-    description: 'O melhor clube de padel da região, com quadras de alta qualidade e estrutura completa para nossos atletas.',
-    courts: 8,
-    instagram: '@clubeelitepadel',
+    description: id === 'clube-aurora' 
+      ? 'Clube completo com 8 quadras cobertas e descobertas, oferecendo aulas para todos os níveis e organizando torneios regulares.'
+      : 'O melhor clube de padel da região, com quadras de alta qualidade e estrutura completa para nossos atletas.',
+    courts: id === 'clube-aurora' ? 8 : 8,
+    instagram: id === 'clube-aurora' ? '@clubeaurorapadel' : '@clubeelitepadel',
     twitter: '@clubeelite',
-    threads: '@clubeelitepadel'
+    threads: '@clubeelitepadel',
+    rating: id === 'clube-aurora' ? 4.8 : 4.9,
+    reviewsCount: id === 'clube-aurora' ? 124 : 156,
+    services: id === 'clube-aurora' 
+      ? ['Quadras', 'Aulas', 'Torneios', 'Aluguel de Material']
+      : ['Quadras', 'Aulas', 'Torneios', 'Vestiários']
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -88,9 +104,9 @@ const ClubProfile: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-light">
-      <DashboardHeader />
+      {user ? <DashboardHeader /> : <Navbar />}
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Column - Club Info */}
           <div className="lg:col-span-4">
@@ -129,6 +145,15 @@ const ClubProfile: React.FC = () => {
                     <BadgeCheck size={24} className="text-primary-500 ml-2" />
                   </div>
                   <div className="flex items-center justify-center mt-2">
+                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                    <span className="text-sm font-medium text-dark-700 ml-1">
+                      {clubData.rating}
+                    </span>
+                    <span className="text-xs text-dark-500 ml-1">
+                      ({clubData.reviewsCount} avaliações)
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-center mt-2">
                     <MapPin size={16} className="text-gray-500 mr-1" />
                     <p className="text-gray-600">{clubData.city}, {clubData.state}</p>
                   </div>
@@ -146,10 +171,31 @@ const ClubProfile: React.FC = () => {
                   <p className="text-gray-700 text-center">{clubData.description}</p>
                 </div>
 
-                <button className="w-full mt-6 bg-gradient-to-r from-primary-900 to-primary-700 text-white py-2 rounded-md hover:from-primary-800 hover:to-primary-600 transition-all duration-300 flex items-center justify-center">
-                  <Edit2 size={20} className="mr-2" />
-                  Editar Perfil
-                </button>
+                {/* Serviços oferecidos */}
+                <div className="w-full mt-6">
+                  <h3 className="font-semibold mb-3 text-center">Serviços Oferecidos</h3>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {clubData.services.map((service, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs text-primary-700 font-medium"
+                      >
+                        {service.toLowerCase().includes('torneio') && <Trophy size={12} />}
+                        {service.toLowerCase().includes('aula') && <Dumbbell size={12} />}
+                        {service.toLowerCase().includes('quadra') && <Calendar size={12} />}
+                        {service.toLowerCase().includes('material') && <Building2 size={12} />}
+                        {service}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {user && (
+                  <button className="w-full mt-6 bg-gradient-to-r from-primary-900 to-primary-700 text-white py-2 rounded-md hover:from-primary-800 hover:to-primary-600 transition-all duration-300 flex items-center justify-center">
+                    <Edit2 size={20} className="mr-2" />
+                    Editar Perfil
+                  </button>
+                )}
                 
                 <div className="flex justify-between w-full mt-6">
                   <div className="text-center">
@@ -316,6 +362,8 @@ const ClubProfile: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 };
