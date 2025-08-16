@@ -1,5 +1,4 @@
-// src/components/Navbar.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -16,25 +15,47 @@ const Navbar: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Usuário logado usa DashboardHeader – não renderizamos esta navbar
+  // Se estiver logado, outra navbar é usada
   if (user) return null;
 
   const handleLogoClick = () => navigate("/");
 
+  // ESC fecha o menu
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Trava o scroll quando o menu está aberto
+  useEffect(() => {
+    if (isOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [isOpen]);
+
   return (
     <>
-      <nav className="bg-white shadow-lg fixed w-full z-[100] border-b border-gray-100">
+      {/* HEADER */}
+      <nav className="bg-white shadow-lg fixed top-0 inset-x-0 w-full z-[200] border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* HEADER (altura um pouco menor) */}
           <div className="flex justify-between h-[70px]">
-            {/* Esquerda: Burger + Logo (logo some quando menu aberto no mobile) */}
+            {/* Esquerda: Burger + Logo */}
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setIsOpen(true)}
-                className="md:hidden text-dark-600 hover:text-primary-900 focus:outline-none transition-colors"
+                onClick={() => setIsOpen((v) => !v)}
+                className="md:hidden text-dark-600 hover:text-primary-900 focus:outline-none transition-colors pointer-events-auto"
                 aria-label="Abrir menu"
+                aria-expanded={isOpen}
+                aria-controls="mobile-drawer"
               >
-                <Menu size={28} />
+                <Menu size={30} />
               </button>
 
               <button
@@ -92,26 +113,26 @@ const Navbar: React.FC = () => {
                 Contato
               </Link>
 
-              {/* Desktop: abrir modal (sem navegar) */}
+              {/* Botão Entrar (desktop) com mais padding */}
               <button
                 onClick={() => {
                   setLoginMode("login");
                   setIsLoginModalOpen(true);
                 }}
-                className="bg-gradient-to-r from-primary-900 to-primary-700 text-white px-6 py-2 rounded-lg hover:from-primary-800 hover:to-primary-600 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="bg-gradient-to-r from-primary-900 to-primary-700 text-white px-7 py-2 rounded-lg hover:from-primary-800 hover:to-primary-600 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
                 Entrar
               </button>
             </div>
 
-            {/* Direita (MOBILE): botão Entrar sempre visível quando menu fechado — menorzinho */}
+            {/* Direita (mobile): Entrar menor quando menu fechado */}
             <div className="md:hidden flex items-center">
               <button
                 onClick={() => {
                   setLoginMode("login");
                   setIsLoginModalOpen(true);
                 }}
-                className={`rounded-lg px-3 py-1.5 text-sm font-semibold shadow-sm transition
+                className={`rounded-lg px-4 py-1.5 text-sm font-semibold shadow-sm transition
                             bg-gradient-to-r from-primary-900 to-primary-700 text-white
                             ${isOpen ? "invisible" : "visible"}`}
               >
@@ -122,21 +143,20 @@ const Navbar: React.FC = () => {
         </div>
       </nav>
 
-      {/* OVERLAY */}
+      {/* OVERLAY (só aparece quando aberto) */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-[99]"
+          className="fixed inset-0 bg-black/40 z-[210]"
           onClick={() => setIsOpen(false)}
           aria-hidden="true"
         />
       )}
 
-      {/* SLIDE-OVER MENU (mobile) */}
+      {/* DRAWER MOBILE */}
       <aside
-        className={`fixed top-0 left-0 h-full z-[100] w-[85%] max-w-sm bg-white shadow-2xl transform transition-transform duration-300 ease-out
-                    ${
-                      isOpen ? "translate-x-0" : "-translate-x-full"
-                    } md:hidden`}
+        id="mobile-drawer"
+        className={`fixed top-0 left-0 h-full z-[220] w-[85%] max-w-sm bg-white shadow-2xl transform transition-transform duration-300 ease-out
+        ${isOpen ? "translate-x-0" : "-translate-x-full"} md:hidden`}
         role="dialog"
         aria-modal="true"
       >
@@ -199,10 +219,10 @@ const Navbar: React.FC = () => {
           </Link>
         </div>
 
-        {/* Divisor roxo */}
+        {/* Divisor */}
         <div className="border-t border-primary-200 my-2" />
 
-        {/* Botões (ordem invertida: Cadastro primeiro) */}
+        {/* Botões (Cadastro antes de Entrar) */}
         <div className="px-4 pt-2 pb-6 space-y-3">
           <button
             onClick={() => {
@@ -227,6 +247,7 @@ const Navbar: React.FC = () => {
         </div>
       </aside>
 
+      {/* Modal de login/cadastro */}
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
