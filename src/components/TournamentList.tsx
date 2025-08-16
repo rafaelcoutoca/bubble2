@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import TournamentCard from "./TournamentCard";
 import { Tournament, LocationFilter } from "../types";
-import { useAuth } from "../contexts/AuthContext";
 
 interface TournamentListProps {
   filters: LocationFilter;
@@ -14,7 +12,6 @@ const TournamentList: React.FC<TournamentListProps> = ({ filters, limit }) => {
     []
   );
   const [isLoading, setIsLoading] = useState(false);
-  const { user, profile } = useAuth();
 
   useEffect(() => {
     setIsLoading(true);
@@ -32,15 +29,11 @@ const TournamentList: React.FC<TournamentListProps> = ({ filters, limit }) => {
           city: t.location?.city || t.city || "São Paulo",
           state: t.location?.state || t.state || "SP",
         },
-        // Agora passamos PERÍODO completo
         startDate: t.startDate,
         endDate: t.endDate,
-        // compat legado
         date: t.startDate,
-        // status normalizado
         status: t.status === "scheduled" ? "open" : t.status,
         participantsCount: t.participantsCount || 0,
-        // novo: esporte
         sport: t.sport || "Padel",
       })
     );
@@ -60,8 +53,13 @@ const TournamentList: React.FC<TournamentListProps> = ({ filters, limit }) => {
       result = result.filter((tr) => tr.location.city === filters.city);
     if (filters.status)
       result = result.filter((tr) => tr.status === filters.status);
+    // novo: filtrar por esporte (se existir na estrutura do filtro)
+    // @ts-ignore – se você já adicionou sport em LocationFilter, remova esta linha e filtre normalmente
+    if (filters.sport) {
+      // @ts-ignore
+      result = result.filter((tr) => tr.sport === filters.sport);
+    }
 
-    // Ordena por startDate; completed no fim
     result.sort((a, b) => {
       if (a.status === "completed" && b.status !== "completed") return 1;
       if (a.status !== "completed" && b.status === "completed") return -1;
@@ -97,14 +95,6 @@ const TournamentList: React.FC<TournamentListProps> = ({ filters, limit }) => {
             ? "Ainda não há torneios criados pelos clubes."
             : "Tente ajustar seus filtros ou busque em outra região."}
         </p>
-        {user && profile?.user_type === "club" && (
-          <Link
-            to="/create-tournament"
-            className="inline-flex items-center bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            Criar Primeiro Torneio
-          </Link>
-        )}
       </div>
     );
   }
@@ -112,13 +102,9 @@ const TournamentList: React.FC<TournamentListProps> = ({ filters, limit }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {filteredTournaments.map((tournament) => (
-        <Link
-          key={tournament.id}
-          to={`/tournament/${tournament.id}`}
-          className="block"
-        >
+        <div key={tournament.id} className="block">
           <TournamentCard tournament={tournament} />
-        </Link>
+        </div>
       ))}
     </div>
   );

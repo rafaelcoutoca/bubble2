@@ -1,19 +1,33 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Search, MapPin, Filter } from "lucide-react";
-import { tournaments as allTournaments } from "../data/tournaments";
-import { LocationFilter, TournamentStatus } from "../types";
+import { getClubTournaments } from "../data/tournaments";
+import { LocationFilter, TournamentStatus, Sport } from "../types";
 
 interface FiltersProps {
   onFilterChange: (filters: LocationFilter) => void;
 }
 
+const SPORTS: Sport[] = ["Padel", "Beach Tennis", "Tênis", "Pickleball"];
+
 const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
+  // estados locais
+  const [selectedSport, setSelectedSport] = useState<Sport | "">("");
   const [selectedState, setSelectedState] = useState<string>("");
   const [selectedCity, setSelectedCity] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<TournamentStatus | "">(
     ""
   );
   const [searchTerm, setSearchTerm] = useState("");
+
+  // torneios do localStorage (recalcula quando filtro de esporte muda,
+  // assim as listas de estado/cidade já vêm contextualizadas pelo esporte)
+  const allTournaments = useMemo(() => {
+    const list = getClubTournaments();
+    return selectedSport
+      ? list.filter((t) => (t.sport || "Padel") === selectedSport)
+      : list;
+  }, [selectedSport]);
+
   const [cities, setCities] = useState<
     { value: string; label: string; count: number }[]
   >([]);
@@ -22,14 +36,23 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
   >([]);
   const [isOpen, setIsOpen] = useState(false);
 
+  // algum filtro ativo?
   const hasActiveFilters = useMemo(
     () =>
-      !!(selectedState || selectedCity || selectedStatus || searchTerm.trim()),
-    [selectedState, selectedCity, selectedStatus, searchTerm]
+      !!(
+        selectedSport ||
+        selectedState ||
+        selectedCity ||
+        selectedStatus ||
+        searchTerm.trim()
+      ),
+    [selectedSport, selectedState, selectedCity, selectedStatus, searchTerm]
   );
 
+  // contagem filtrada (para o badge)
   const filteredCount = useMemo(() => {
     return allTournaments.filter((t) => {
+      const bySport = !selectedSport || (t.sport || "Padel") === selectedSport;
       const byState = !selectedState || t.location.state === selectedState;
       const byCity = !selectedCity || t.location.city === selectedCity;
       const byStatus = !selectedStatus || t.status === selectedStatus;
@@ -40,10 +63,18 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
           .some((v) =>
             String(v).toLowerCase().includes(searchTerm.toLowerCase())
           );
-      return byState && byCity && byStatus && bySearch;
+      return bySport && byState && byCity && byStatus && bySearch;
     }).length;
-  }, [selectedState, selectedCity, selectedStatus, searchTerm]);
+  }, [
+    allTournaments,
+    selectedSport,
+    selectedState,
+    selectedCity,
+    selectedStatus,
+    searchTerm,
+  ]);
 
+  // montar lista de estados (com counts) — depende do esporte
   useEffect(() => {
     const statesWithCounts = allTournaments.reduce((acc, tournament) => {
       const state = tournament.location.state;
@@ -63,8 +94,15 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
         count: data.count,
       })),
     ]);
-  }, []);
 
+    // se o estado atual não existe mais após mudar o esporte, resetar
+    if (selectedState && !statesWithCounts[selectedState]) {
+      setSelectedState("");
+      setSelectedCity("");
+    }
+  }, [allTournaments, selectedState]);
+
+  // montar lista de cidades (com counts) — depende de esporte e estado
   useEffect(() => {
     const filteredTournaments = selectedState
       ? allTournaments.filter((t) => t.location.state === selectedState)
@@ -92,31 +130,37 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
         count: data.count,
       })),
     ]);
-    setSelectedCity("");
-  }, [selectedState]);
 
+    // ao trocar estado, zera cidade
+    setSelectedCity("");
+  }, [allTournaments, selectedState]);
+
+  // propagar filtros para o pai
   useEffect(() => {
     onFilterChange({
+      sport: selectedSport,
       state: selectedState,
       city: selectedCity,
       status: selectedStatus,
       search: searchTerm,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedState, selectedCity, selectedStatus, searchTerm]);
+  }, [selectedSport, selectedState, selectedCity, selectedStatus, searchTerm]);
 
   const handleClear = () => {
+    setSelectedSport("");
     setSelectedState("");
     setSelectedCity("");
     setSelectedStatus("");
     setSearchTerm("");
-    onFilterChange({ state: "", city: "", status: "", search: "" });
+    onFilterChange({ sport: "", state: "", city: "", status: "", search: "" });
   };
 
   return (
     <div
-      className={`bg-white rounded-xl shadow-lg border border-gray-100
-                  p-4 md:p-6 mb-6 ${isOpen ? "pb-4" : "pb-3"}`}
+      className={`bg-white rounded-xl shadow-lg border border-gray-100 p-4 md:p-6 mb-6 ${
+        isOpen ? "pb-4" : "pb-3"
+      }`}
     >
       {/* Cabeçalho */}
       <div className="flex justify-between items-center mb-3">
@@ -127,10 +171,7 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
           </h2>
 
           {hasActiveFilters && (
-            <span
-              className="ml-3 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs md:text-sm font-semibold
-                         bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary-200"
-            >
+            <span className="ml-3 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs md:text-sm font-semibold bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary-200">
               {filteredCount}
             </span>
           )}
@@ -146,7 +187,6 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
               Limpar seleção
             </button>
           )}
-
           <button
             type="button"
             className="md:hidden text-primary-600 font-semibold"
@@ -159,16 +199,34 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
         </div>
       </div>
 
-      {/* Conteúdo com collapse em max-height (funciona melhor no mobile) */}
+      {/* Conteúdo com collapse */}
       <div
         id="filters-content"
-        className={`
-          transition-[max-height] duration-300 ease-in-out
-          ${isOpen ? "max-h-[1200px]" : "max-h-0 overflow-hidden"}
-          md:max-h-none md:overflow-visible
-        `}
+        className={`transition-[max-height] duration-300 ease-in-out ${
+          isOpen ? "max-h-[1200px]" : "max-h-0 overflow-hidden"
+        } md:max-h-none md:overflow-visible`}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+          {/* 1) Esporte */}
+          <div className="flex flex-col">
+            <label className="text-sm font-semibold text-dark-700 mb-2">
+              Esporte
+            </label>
+            <select
+              className="block w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+              value={selectedSport}
+              onChange={(e) => setSelectedSport(e.target.value as Sport | "")}
+            >
+              <option value="">Todos os Esportes</option>
+              {SPORTS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 2) Estado */}
           <div className="flex flex-col">
             <label className="text-sm font-semibold text-dark-700 mb-2">
               Estado
@@ -191,6 +249,7 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
             </div>
           </div>
 
+          {/* 3) Cidade */}
           <div className="flex flex-col">
             <label className="text-sm font-semibold text-dark-700 mb-2">
               Cidade
@@ -214,26 +273,26 @@ const Filters: React.FC<FiltersProps> = ({ onFilterChange }) => {
             </div>
           </div>
 
+          {/* 4) Status */}
           <div className="flex flex-col">
             <label className="text-sm font-semibold text-dark-700 mb-2">
               Status
             </label>
-            <div className="relative">
-              <select
-                className="block w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-                value={selectedStatus}
-                onChange={(e) =>
-                  setSelectedStatus(e.target.value as TournamentStatus | "")
-                }
-              >
-                <option value="">Todos os Status</option>
-                <option value="open">Inscrições Abertas</option>
-                <option value="in-progress">Em Andamento</option>
-                <option value="completed">Concluído</option>
-              </select>
-            </div>
+            <select
+              className="block w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+              value={selectedStatus}
+              onChange={(e) =>
+                setSelectedStatus(e.target.value as TournamentStatus | "")
+              }
+            >
+              <option value="">Todos os Status</option>
+              <option value="open">Inscrições Abertas</option>
+              <option value="in-progress">Em Andamento</option>
+              <option value="completed">Concluído</option>
+            </select>
           </div>
 
+          {/* 5) Pesquisa */}
           <div className="flex flex-col">
             <label className="text-sm font-semibold text-dark-700 mb-2">
               Pesquisar

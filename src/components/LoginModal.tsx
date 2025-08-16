@@ -1,77 +1,85 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Mail, Lock, Eye, EyeOff, User, Building2 } from 'lucide-react';
-import { signIn, signUp } from '../lib/auth';
-import { useAuth } from '../contexts/AuthContext';
-import { BubbleLogo } from './Hero';
+import React, { useState, useEffect, useRef } from "react";
+import { X, Mail, Lock, Eye, EyeOff, User, Building2 } from "lucide-react";
+import { signIn, signUp } from "../lib/auth";
+import { useAuth } from "../contexts/AuthContext";
+import { BubbleLogo } from "./Hero";
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** novo: controla modo inicial do modal */
+  defaultMode?: "login" | "signup";
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [userType, setUserType] = useState<'athlete' | 'club' | null>(null);
+const LoginModal: React.FC<LoginModalProps> = ({
+  isOpen,
+  onClose,
+  defaultMode = "login",
+}) => {
+  const [isLogin, setIsLogin] = useState(defaultMode !== "signup");
+  const [userType, setUserType] = useState<"athlete" | "club" | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  
+  const [error, setError] = useState("");
+
   // Club specific fields
   const [clubData, setClubData] = useState({
-    clubName: '',
-    cnpj: '',
-    phone: ''
+    clubName: "",
+    cnpj: "",
+    phone: "",
   });
 
   // Athlete specific fields
   const [athleteData, setAthleteData] = useState({
-    firstName: '',
-    lastName: '',
-    phone: ''
+    firstName: "",
+    lastName: "",
+    phone: "",
   });
 
   const modalRef = useRef<HTMLDivElement>(null);
   const { refreshProfile } = useAuth();
 
+  // quando abrir, sincroniza o modo e reseta o formulário
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      setIsLogin(defaultMode !== "signup");
+      resetForm(true); // mantém isLogin ajustado pelo defaultMode
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, defaultMode]);
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
+  const handleClickOutside = (event: MouseEvent) => {
+    if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+      onClose();
+    }
+  };
 
   if (!isOpen) return null;
 
   const formatCNPJ = (value: string) => {
     return value
-      .replace(/\D/g, '')
-      .replace(/(\d{2})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1/$2')
-      .replace(/(\d{4})(\d)/, '$1-$2')
+      .replace(/\D/g, "")
+      .replace(/(\d{2})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1/$2")
+      .replace(/(\d{4})(\d)/, "$1-$2")
       .slice(0, 18);
   };
 
   const formatPhone = (value: string) => {
     return value
-      .replace(/\D/g, '')
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d)(\d{4})/, '$1 $2')
-      .replace(/(\d{4})(\d)/, '$1-$2')
+      .replace(/\D/g, "")
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d)(\d{4})/, "$1 $2")
+      .replace(/(\d{4})(\d)/, "$1-$2")
       .slice(0, 17);
   };
 
@@ -79,15 +87,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const { name, value } = e.target;
     let formattedValue = value;
 
-    if (name === 'cnpj') {
+    if (name === "cnpj") {
       formattedValue = formatCNPJ(value);
-    } else if (name === 'phone') {
+    } else if (name === "phone") {
       formattedValue = formatPhone(value);
     }
 
-    setClubData(prev => ({
+    setClubData((prev) => ({
       ...prev,
-      [name]: formattedValue
+      [name]: formattedValue,
     }));
   };
 
@@ -95,95 +103,88 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const { name, value } = e.target;
     let formattedValue = value;
 
-    if (name === 'phone') {
+    if (name === "phone") {
       formattedValue = formatPhone(value);
     }
 
-    setAthleteData(prev => ({
+    setAthleteData((prev) => ({
       ...prev,
-      [name]: formattedValue
+      [name]: formattedValue,
     }));
   };
 
-  const handleUserTypeSelect = (type: 'athlete' | 'club') => {
+  const handleUserTypeSelect = (type: "athlete" | "club") => {
     setUserType(type);
     setShowForm(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
-    
+
     try {
       if (isLogin) {
         // Login
         const { user, profile } = await signIn(email, password);
         await refreshProfile();
         onClose();
-        
-        // Navegar para o dashboard apropriado usando window.location
-        if (profile.user_type === 'club') {
-          window.location.href = '/club-dashboard';
+
+        if (profile.user_type === "club") {
+          window.location.href = "/club-dashboard";
         } else {
-          window.location.href = '/dashboard';
+          window.location.href = "/dashboard";
         }
       } else {
         // Registration
         if (!userType) {
-          throw new Error('Por favor, selecione o tipo de conta.');
+          throw new Error("Por favor, selecione o tipo de conta.");
         }
 
         if (password !== confirmPassword) {
-          throw new Error('As senhas não coincidem');
+          throw new Error("As senhas não coincidem");
         }
 
-        // Validar campos obrigatórios
-        if (userType === 'club') {
-          if (!clubData.clubName.trim()) {
-            throw new Error('Nome do clube é obrigatório.');
-          }
-          if (!clubData.cnpj.replace(/\D/g, '')) {
-            throw new Error('CNPJ é obrigatório.');
-          }
-          if (!clubData.phone.replace(/\D/g, '')) {
-            throw new Error('Telefone é obrigatório.');
-          }
+        if (userType === "club") {
+          if (!clubData.clubName.trim())
+            throw new Error("Nome do clube é obrigatório.");
+          if (!clubData.cnpj.replace(/\D/g, ""))
+            throw new Error("CNPJ é obrigatório.");
+          if (!clubData.phone.replace(/\D/g, ""))
+            throw new Error("Telefone é obrigatório.");
         } else {
-          if (!athleteData.firstName.trim()) {
-            throw new Error('Nome é obrigatório.');
-          }
-          if (!athleteData.lastName.trim()) {
-            throw new Error('Sobrenome é obrigatório.');
-          }
-          if (!athleteData.phone.replace(/\D/g, '')) {
-            throw new Error('Telefone é obrigatório.');
-          }
+          if (!athleteData.firstName.trim())
+            throw new Error("Nome é obrigatório.");
+          if (!athleteData.lastName.trim())
+            throw new Error("Sobrenome é obrigatório.");
+          if (!athleteData.phone.replace(/\D/g, ""))
+            throw new Error("Telefone é obrigatório.");
         }
 
         const userData = {
           user_type: userType,
           email: email.toLowerCase(),
-          ...(userType === 'club' ? {
-            club_name: clubData.clubName.trim(),
-            cnpj: clubData.cnpj.replace(/\D/g, ''),
-            phone: clubData.phone.replace(/\D/g, '')
-          } : {
-            first_name: athleteData.firstName.trim(),
-            last_name: athleteData.lastName.trim(),
-            phone: athleteData.phone.replace(/\D/g, '')
-          })
+          ...(userType === "club"
+            ? {
+                club_name: clubData.clubName.trim(),
+                cnpj: clubData.cnpj.replace(/\D/g, ""),
+                phone: clubData.phone.replace(/\D/g, ""),
+              }
+            : {
+                first_name: athleteData.firstName.trim(),
+                last_name: athleteData.lastName.trim(),
+                phone: athleteData.phone.replace(/\D/g, ""),
+              }),
         };
 
         const { user, profile } = await signUp(email, password, userData);
         await refreshProfile();
         onClose();
-        
-        // Navegar para o dashboard apropriado usando window.location
-        if (profile.user_type === 'club') {
-          window.location.href = '/club-dashboard';
+
+        if (profile.user_type === "club") {
+          window.location.href = "/club-dashboard";
         } else {
-          window.location.href = '/dashboard';
+          window.location.href = "/dashboard";
         }
       }
     } catch (error: any) {
@@ -193,44 +194,42 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const resetForm = () => {
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
-    setClubData({
-      clubName: '',
-      cnpj: '',
-      phone: ''
-    });
-    setAthleteData({
-      firstName: '',
-      lastName: '',
-      phone: ''
-    });
+  const resetForm = (keepMode = false) => {
+    if (!keepMode) setIsLogin(true);
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setClubData({ clubName: "", cnpj: "", phone: "" });
+    setAthleteData({ firstName: "", lastName: "", phone: "" });
     setUserType(null);
     setShowForm(false);
-    setError('');
+    setError("");
   };
 
   const handleToggleMode = () => {
     setIsLogin(!isLogin);
-    resetForm();
+    resetForm(true);
   };
 
   const handleBackToUserType = () => {
     setShowForm(false);
     setUserType(null);
-    setError('');
+    setError("");
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div 
-        ref={modalRef} 
+      <div
+        ref={modalRef}
         className={`bg-white rounded-2xl p-8 w-full max-w-md relative shadow-2xl border border-gray-100 animate-fade-in ${
-          isLogin ? 'max-h-[90vh] overflow-y-auto' : 'max-h-[95vh] overflow-y-auto'
+          isLogin
+            ? "max-h-[90vh] overflow-y-auto"
+            : "max-h-[95vh] overflow-y-auto"
         }`}
-        style={{ marginTop: isLogin ? 'auto' : '2rem', marginBottom: isLogin ? 'auto' : '2rem' }}
+        style={{
+          marginTop: isLogin ? "auto" : "2rem",
+          marginBottom: isLogin ? "auto" : "2rem",
+        }}
       >
         <button
           onClick={onClose}
@@ -249,15 +248,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         <h2 className="text-2xl font-bold text-dark-800 mb-6 text-center">
-          {isLogin ? 'Entrar na plataforma' : 'Criar sua conta'}
+          {isLogin ? "Entrar na plataforma" : "Criar sua conta"}
         </h2>
 
-        {/* Dica para testes */}
         {isLogin && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-sm">
-            <strong>Para testes:</strong><br />
-            Atleta: atleta@teste.com<br />
-            Clube: clube@teste.com<br />
+            <strong>Para testes:</strong>
+            <br />
+            Atleta: atleta@teste.com
+            <br />
+            Clube: clube@teste.com
+            <br />
             Senha: qualquer uma
           </div>
         )}
@@ -276,12 +277,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             <div className="space-y-4">
               <button
                 type="button"
-                onClick={() => handleUserTypeSelect('athlete')}
+                onClick={() => handleUserTypeSelect("athlete")}
                 className="w-full flex items-center justify-center p-6 border-2 border-gray-200 rounded-xl transition-all hover:border-primary-300 hover:bg-primary-50 group"
               >
-                <User size={48} className="mr-4 text-primary-600 group-hover:text-primary-700" />
+                <User
+                  size={48}
+                  className="mr-4 text-primary-600 group-hover:text-primary-700"
+                />
                 <div className="text-left">
-                  <span className="block text-xl font-bold text-dark-800 group-hover:text-primary-900">Atleta</span>
+                  <span className="block text-xl font-bold text-dark-800 group-hover:text-primary-900">
+                    Atleta
+                  </span>
                   <span className="block text-sm text-dark-500">
                     Para jogadores individuais
                   </span>
@@ -289,12 +295,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               </button>
               <button
                 type="button"
-                onClick={() => handleUserTypeSelect('club')}
+                onClick={() => handleUserTypeSelect("club")}
                 className="w-full flex items-center justify-center p-6 border-2 border-gray-200 rounded-xl transition-all hover:border-primary-300 hover:bg-primary-50 group"
               >
-                <Building2 size={48} className="mr-4 text-primary-600 group-hover:text-primary-700" />
+                <Building2
+                  size={48}
+                  className="mr-4 text-primary-600 group-hover:text-primary-700"
+                />
                 <div className="text-left">
-                  <span className="block text-xl font-bold text-dark-800 group-hover:text-primary-900">Clube</span>
+                  <span className="block text-xl font-bold text-dark-800 group-hover:text-primary-900">
+                    Clube
+                  </span>
                   <span className="block text-sm text-dark-500">
                     Para clubes e organizadores
                   </span>
@@ -316,15 +327,22 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                     ← Voltar
                   </button>
                   <div className="flex items-center">
-                    {userType === 'athlete' ? (
+                    {userType === "athlete" ? (
                       <>
                         <User size={20} className="text-primary-600 mr-2" />
-                        <span className="text-sm font-semibold text-primary-700">Conta de Atleta</span>
+                        <span className="text-sm font-semibold text-primary-700">
+                          Conta de Atleta
+                        </span>
                       </>
                     ) : (
                       <>
-                        <Building2 size={20} className="text-primary-600 mr-2" />
-                        <span className="text-sm font-semibold text-primary-700">Conta de Clube</span>
+                        <Building2
+                          size={20}
+                          className="text-primary-600 mr-2"
+                        />
+                        <span className="text-sm font-semibold text-primary-700">
+                          Conta de Clube
+                        </span>
                       </>
                     )}
                   </div>
@@ -333,7 +351,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && showForm && userType === 'club' && (
+              {!isLogin && showForm && userType === "club" && (
                 <>
                   <div>
                     <label className="block text-sm font-semibold text-dark-700 mb-1">
@@ -382,7 +400,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 </>
               )}
 
-              {!isLogin && showForm && userType === 'athlete' && (
+              {!isLogin && showForm && userType === "athlete" && (
                 <>
                   <div>
                     <label className="block text-sm font-semibold text-dark-700 mb-1">
@@ -433,7 +451,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
               <div>
                 <label className="block text-sm font-semibold text-dark-700 mb-1">
-                  {!isLogin && showForm && userType === 'club' ? 'E-mail do Clube' : 'Email'}
+                  {!isLogin && showForm && userType === "club"
+                    ? "E-mail do Clube"
+                    : "Email"}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -444,7 +464,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-                    placeholder={!isLogin && showForm && userType === 'club' ? 'contato@clube.com' : 'seu@email.com'}
+                    placeholder={
+                      !isLogin && showForm && userType === "club"
+                        ? "contato@clube.com"
+                        : "seu@email.com"
+                    }
                     required
                     autoComplete="email"
                     spellCheck="false"
@@ -499,10 +523,16 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-dark-400 hover:text-dark-600 transition-colors"
                     >
-                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {showConfirmPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -513,9 +543,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 disabled={loading}
                 className="w-full bg-gradient-to-r from-primary-900 to-primary-700 text-white py-3 px-4 rounded-lg hover:from-primary-800 hover:to-primary-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
-                {loading ? 'Carregando...' : (
-                  isLogin ? 'Entrar' : `Criar Conta ${userType === 'club' ? 'do Clube' : 'de Atleta'}`
-                )}
+                {loading
+                  ? "Carregando..."
+                  : isLogin
+                  ? "Entrar"
+                  : `Criar Conta ${
+                      userType === "club" ? "do Clube" : "de Atleta"
+                    }`}
               </button>
             </form>
           </>
@@ -528,8 +562,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               className="text-primary-600 hover:text-primary-700 text-sm font-semibold transition-colors"
             >
               {isLogin
-                ? 'Não tem uma conta? Cadastre-se'
-                : 'Já tem uma conta? Entre'}
+                ? "Não tem uma conta? Cadastre-se"
+                : "Já tem uma conta? Entre"}
             </button>
           </div>
         )}

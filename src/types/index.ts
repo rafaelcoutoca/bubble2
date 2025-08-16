@@ -1,4 +1,5 @@
 export type TournamentStatus = "open" | "closed" | "in-progress" | "completed";
+export type Sport = "Padel" | "Beach Tennis" | "Tênis" | "Pickleball";
 
 export interface Tournament {
   id: string;
@@ -9,18 +10,16 @@ export interface Tournament {
     state: string;
   };
 
-  // Intervalo de datas (preferencial)
-  startDate: string; // ex.: "2025-08-14"
-  endDate?: string; // ex.: "2025-08-16" (opcional)
-
-  // Compatibilidade com código legado
+  // Período
+  startDate: string;
+  endDate?: string;
   date?: string;
-
-  // Novo: esporte do torneio
-  sport?: string;
 
   status: TournamentStatus;
   participantsCount: number;
+
+  // Novo: esporte
+  sport?: Sport | string;
 }
 
 export interface LocationFilter {
@@ -28,4 +27,5 @@ export interface LocationFilter {
   city: string;
   status: TournamentStatus | "";
   search: string;
+  sport?: Sport | ""; // Novo
 }

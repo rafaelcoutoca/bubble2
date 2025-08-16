@@ -174,7 +174,9 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
 
         {/* Título */}
         <h2 className="text-xl font-bold text-dark-800 mb-3 group-hover:text-primary-900 transition-colors">
-          {name}
+          <Link to={`/tournament/${id}`} className="hover:underline">
+            {name}
+          </Link>
         </h2>
 
         {/* Conteúdo */}
