@@ -5,11 +5,12 @@ import Filters from "../components/Filters";
 import TournamentList from "../components/TournamentList";
 import { LocationFilter } from "../types";
 import { useAuth } from "../contexts/AuthContext";
-import { BubbleLogo } from "../components/Hero";
-import Footer from "../components/Footer"; // ajuste o caminho conforme a pasta
+import Footer from "../components/Footer";
+import LoginModal from "../components/LoginModal";
 
 const Home: React.FC = () => {
   const { user, loading } = useAuth();
+
   const [filters, setFilters] = useState<LocationFilter>({
     state: "",
     city: "",
@@ -17,10 +18,13 @@ const Home: React.FC = () => {
     search: "",
   });
 
+  // controla o modal de login/cadastro
+  const [authOpen, setAuthOpen] = useState(false);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-light flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
       </div>
     );
   }
@@ -29,7 +33,7 @@ const Home: React.FC = () => {
   if (user) {
     return (
       <div className="min-h-screen bg-light flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
       </div>
     );
   }
@@ -39,14 +43,18 @@ const Home: React.FC = () => {
   };
 
   const scrollToTournaments = () => {
-    const element = document.getElementById("tournaments-section");
-    if (element) element.scrollIntoView({ behavior: "smooth" });
+    const el = document.getElementById("tournaments-section");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
     <div className="min-h-screen bg-light">
       <Navbar />
-      <Hero onSearchClick={scrollToTournaments} />
+
+      <Hero
+        onSearchClick={scrollToTournaments}
+        onSignupClick={() => setAuthOpen(true)} // <<< abre o modal de cadastro
+      />
 
       <div
         id="tournaments-section"
@@ -65,8 +73,14 @@ const Home: React.FC = () => {
         <TournamentList filters={filters} limit={6} />
       </div>
 
-      {/* FOOTER */}
       <Footer />
+
+      {/* Modal de Login/Cadastro */}
+      <LoginModal
+        isOpen={authOpen}
+        onClose={() => setAuthOpen(false)}
+        defaultMode="signup" // abre direto na aba de cadastro
+      />
     </div>
   );
 };
