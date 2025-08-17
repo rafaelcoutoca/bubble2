@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { MapPin, Calendar, Users, Zap, Info, Heart } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Tournament } from "../types";
 import StatusBadge from "./StatusBadge";
 
@@ -82,9 +82,9 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
     date,
     status,
     participantsCount,
-    sport,
   } = tournament;
 
+  const navigate = useNavigate();
   const [isFavorite, setIsFavorite] = useState<boolean>(false);
 
   useEffect(() => {
@@ -121,20 +121,17 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
     }
   };
 
+  // dados completos do torneio no LS (para obter club_id)
   const clubTournaments = JSON.parse(
     localStorage.getItem("clubTournaments") || "[]"
   );
   const tournamentData = clubTournaments.find((t: any) => t.id === id);
   const hasParticipantLimit =
     tournamentData?.hasParticipantLimit && tournamentData?.maxParticipants;
+  const clubId: string | undefined = tournamentData?.club_id;
 
   const canRegister = status === "open";
-  const handleButtonClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
 
-  // intervalo preferencial; cai para "date" legado
   const dateText =
     startDate || endDate
       ? formatRangeAbbrev(startDate, endDate)
@@ -143,8 +140,26 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
   const sportLabel = tournament.sport || "Padel";
   const sportCls = getSportBadgeClasses(sportLabel);
 
+  const goToTournament = () => navigate(`/tournament/${id}`);
+  const goToInscritos = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/tournament/${id}?tab=inscritos`);
+  };
+  const goToInformacoesGerais = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/tournament/${id}?tab=informacoes&sub=gerais`);
+  };
+  const goToClub = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (clubId) navigate(`/clubes/${clubId}`);
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full border border-gray-100 group hover:-translate-y-1 cursor-pointer">
+    <div
+      role="button"
+      onClick={goToTournament}
+      className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full border border-gray-100 group hover:-translate-y-1 cursor-pointer"
+    >
       <div className="p-6 flex-1">
         {/* Linha 1: Esporte (com fundo) + Status (somente texto) | Coração */}
         <div className="mb-2 flex items-center justify-between">
@@ -172,16 +187,28 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
           </button>
         </div>
 
-        {/* Título */}
+        {/* Título (sem sublinhado no hover) */}
         <h2 className="text-xl font-bold text-dark-800 mb-3 group-hover:text-primary-900 transition-colors">
-          <Link to={`/tournament/${id}`} className="hover:underline">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              goToTournament();
+            }}
+            className="text-left"
+          >
             {name}
-          </Link>
+          </button>
         </h2>
 
         {/* Conteúdo */}
         <div className="mb-3">
-          <p className="text-dark-600 font-semibold">{club}</p>
+          <button
+            onClick={goToClub}
+            className="text-dark-600 font-semibold hover:text-primary-700"
+            title={clubId ? "Abrir perfil do clube" : undefined}
+          >
+            {club}
+          </button>
         </div>
 
         <div className="flex items-center text-dark-600 mb-3">
@@ -211,26 +238,27 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
       <div className="p-6 pt-0 mt-auto">
         <div className="flex flex-col gap-3">
           <div className="flex gap-3">
-            <Link
-              to={`/tournament/${id}?tab=inscritos`}
-              onClick={handleButtonClick}
+            <button
+              onClick={goToInscritos}
               className="flex-1 bg-white border-2 border-primary-600 text-primary-600 hover:bg-primary-50 px-4 py-2 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center"
             >
               <Users size={16} className="mr-2" />
               Inscritos
-            </Link>
-            <Link
-              to={`/tournament/${id}`}
-              onClick={handleButtonClick}
+            </button>
+            <button
+              onClick={goToInformacoesGerais}
               className="flex-1 bg-white border-2 border-primary-600 text-primary-600 hover:bg-primary-50 px-4 py-2 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center"
             >
               <Info size={16} className="mr-2" />
               Informações
-            </Link>
+            </button>
           </div>
 
           <button
-            onClick={handleButtonClick}
+            onClick={(e) => {
+              e.stopPropagation();
+              // aqui você pode abrir o fluxo de inscrição direto
+            }}
             className={`${
               canRegister
                 ? "bg-gradient-to-r from-primary-900 to-primary-700 hover:from-primary-800 hover:to-primary-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
