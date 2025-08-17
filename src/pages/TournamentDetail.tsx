@@ -1,7 +1,10 @@
+// src/pages/TournamentDetail.tsx
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 import Navbar from "../components/Navbar";
+import { Button } from "../components/ui/Buttons";
+
 import {
   MapPin,
   Calendar,
@@ -12,31 +15,21 @@ import {
   Phone,
   Mail,
   Instagram,
-  ExternalLink,
-  ChevronDown,
-  ChevronUp,
   Edit2,
   Play,
   Crown,
   Medal,
-  Award,
   Info,
-  HelpCircle,
   Navigation,
   Building2,
-  Zap,
-  Star,
   CheckCircle,
   X,
   Share2,
   Search,
-  Filter,
   Plus,
-  Eye,
-  ChevronLeft,
-  ChevronRight,
   Check,
   Trash2,
+  ArrowUpRight,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -290,23 +283,22 @@ const TournamentDetail: React.FC = () => {
   const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
 
-  // Filter states
+  // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedCourt, setSelectedCourt] = useState("all");
   const [selectedDate, setSelectedDate] = useState("all");
 
-  // creator / athlete
+  // Roles
   const isCreator =
     user && profile?.user_type === "club" && tournament?.club_id === user.id;
   const isAthlete = user && profile?.user_type === "athlete";
 
-  // Sync from URL (?tab, ?sub)
+  // Sync tabs from URL
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get("tab") || undefined;
     const sub = params.get("sub") || params.get("subtab") || undefined;
-
     const validTabs = [
       "informacoes",
       "inscritos",
@@ -317,15 +309,11 @@ const TournamentDetail: React.FC = () => {
     ];
     const validSubs = ["gerais", "contato", "localizacao", "regras", "faq"];
 
-    if (tab && validTabs.includes(tab) && tab !== activeTab) {
-      setActiveTab(tab);
-    }
-    if (sub && validSubs.includes(sub) && sub !== activeSubTab) {
+    if (tab && validTabs.includes(tab) && tab !== activeTab) setActiveTab(tab);
+    if (sub && validSubs.includes(sub) && sub !== activeSubTab)
       setActiveSubTab(sub);
-    }
-  }, [location.search]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [location.search]); // eslint-disable-line
 
-  // helper para atualizar a URL mantendo pathname
   const setSearchParams = (next: { tab?: string; sub?: string }) => {
     const params = new URLSearchParams(location.search);
     if (next.tab) params.set("tab", next.tab);
@@ -346,7 +334,6 @@ const TournamentDetail: React.FC = () => {
       const foundTournament = clubTournaments.find((t: any) => t.id === id);
 
       if (foundTournament) {
-        // garantir location
         if (
           !foundTournament.location ||
           typeof foundTournament.location !== "object"
@@ -444,6 +431,7 @@ const TournamentDetail: React.FC = () => {
     { id: "faq", name: "FAQ" },
   ];
 
+  // --- Mock data (mantido) ---
   const mockGroups = [
     {
       name: "Grupo A",
@@ -655,52 +643,6 @@ const TournamentDetail: React.FC = () => {
     },
   ];
 
-  const mockCourts = [
-    {
-      id: "1",
-      name: "Quadra Central",
-      matches: [
-        {
-          time: "09:00",
-          teams: "João Silva / Pedro vs Maria Costa / Ana",
-          status: "completed",
-        },
-        {
-          time: "10:30",
-          teams: "Carlos Lima / Rafael vs Julia Rocha / Camila",
-          status: "in-progress",
-        },
-        {
-          time: "12:00",
-          teams: "Lucas Silva / Pedro vs Bruno Alves / Thiago",
-          status: "scheduled",
-        },
-      ],
-      totalGames: 8,
-      startTime: "09:00",
-      endTime: "17:00",
-    },
-    {
-      id: "2",
-      name: "Quadra 2",
-      matches: [
-        {
-          time: "09:30",
-          teams: "Ana Lima / Rafael vs Camila Souza / Bruno",
-          status: "completed",
-        },
-        {
-          time: "11:00",
-          teams: "Thiago Costa / Lucas vs Pedro Ribeiro / João",
-          status: "scheduled",
-        },
-      ],
-      totalGames: 6,
-      startTime: "09:30",
-      endTime: "16:30",
-    },
-  ];
-
   const mockChampions = [
     {
       category: "Open Masculina",
@@ -740,7 +682,53 @@ const TournamentDetail: React.FC = () => {
     },
   ];
 
-  // Filters helpers
+  // Helpers
+  const formatDateRange = (startISO?: string, endISO?: string) => {
+    if (!startISO) return "";
+    const start = new Date(startISO);
+    const end = endISO ? new Date(endISO) : start;
+
+    const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+    const shortMonth = (d: Date) =>
+      cap(
+        new Intl.DateTimeFormat("pt-BR", { month: "short" })
+          .format(d)
+          .replace(".", "")
+      );
+
+    const sameDay =
+      start.getFullYear() === end.getFullYear() &&
+      start.getMonth() === end.getMonth() &&
+      start.getDate() === end.getDate();
+
+    if (sameDay) {
+      return `${start.getDate()} ${shortMonth(start)} ${start.getFullYear()}`;
+    }
+
+    const sameMonth =
+      start.getFullYear() === end.getFullYear() &&
+      start.getMonth() === end.getMonth();
+
+    if (sameMonth) {
+      return `${start.getDate()} a ${end.getDate()} ${shortMonth(
+        end
+      )} ${end.getFullYear()}`;
+    }
+
+    const sameYear = start.getFullYear() === end.getFullYear();
+    if (sameYear) {
+      return `${start.getDate()} ${shortMonth(
+        start
+      )} a ${end.getDate()} ${shortMonth(end)} ${end.getFullYear()}`;
+    }
+
+    return `${start.getDate()} ${shortMonth(
+      start
+    )} ${start.getFullYear()} a ${end.getDate()} ${shortMonth(
+      end
+    )} ${end.getFullYear()}`;
+  };
+
   const getFilteredRegistrations = () => {
     return mockRegistrations.filter((reg) => {
       const matchesCategory =
@@ -781,17 +769,6 @@ const TournamentDetail: React.FC = () => {
     });
   };
 
-  const getFilteredCourts = () => {
-    return mockCourts.filter((court) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        court.matches.some((match) =>
-          match.teams.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      return matchesSearch;
-    });
-  };
-
   const renderContent = () => {
     switch (activeTab) {
       case "informacoes":
@@ -816,9 +793,9 @@ const TournamentDetail: React.FC = () => {
       case "gerais":
         return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content */}
+            {/* Main */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Descrição do Torneio */}
+              {/* Descrição */}
               <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
                 <div className="flex items-center mb-4">
                   <Info className="text-purple-600 mr-3" size={24} />
@@ -832,7 +809,7 @@ const TournamentDetail: React.FC = () => {
                 </p>
               </div>
 
-              {/* Datas Importantes */}
+              {/* Datas */}
               <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
                 <div className="flex items-center mb-4">
                   <Calendar className="text-purple-600 mr-3" size={24} />
@@ -892,7 +869,7 @@ const TournamentDetail: React.FC = () => {
                 </div>
               </div>
 
-              {/* Taxas de Inscrição */}
+              {/* Taxas */}
               <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
                 <div className="flex items-center mb-4">
                   <DollarSign className="text-green-600 mr-3" size={24} />
@@ -938,7 +915,7 @@ const TournamentDetail: React.FC = () => {
                 </div>
               </div>
 
-              {/* Local do Evento */}
+              {/* Local */}
               <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
                 <div className="flex items-center mb-4">
                   <MapPin className="text-red-600 mr-3" size={24} />
@@ -1041,19 +1018,31 @@ const TournamentDetail: React.FC = () => {
                 </div>
 
                 {/* Contact Buttons */}
-                <div className="space-y-3 mb-6">
-                  <button className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 flex items-center justify-center">
-                    <Phone className="mr-2" size={16} />
+                <div className="space-y-4 md:space-y-5 mb-10">
+                  <Button
+                    variant="accentOutline"
+                    full
+                    leftIcon={<Phone size={16} />}
+                  >
                     WhatsApp
-                  </button>
-                  <button className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center">
-                    <Mail className="mr-2" size={16} />
-                    E-mail
-                  </button>
-                  <button className="w-full bg-pink-600 text-white py-2 rounded-lg hover:bg-pink-700 flex items-center justify-center">
-                    <Instagram className="mr-2" size={16} />
+                  </Button>
+
+                  <Button
+                    onClick={handleClubClick}
+                    variant="blueOutline"
+                    full
+                    leftIcon={<Building2 size={16} />}
+                  >
+                    Perfil do Clube
+                  </Button>
+
+                  <Button
+                    variant="purpleOutline"
+                    full
+                    leftIcon={<Instagram size={16} />}
+                  >
                     Instagram
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Mini Map */}
@@ -1268,21 +1257,24 @@ const TournamentDetail: React.FC = () => {
                   if (!user) {
                     alert("Faça login para se inscrever no torneio");
                   } else {
-                    alert(
-                      "Funcionalidade de inscrição será implementada em breve"
-                    );
+                    setActiveTab("inscritos");
+                    setSearchParams({ tab: "inscritos" });
+                    alert("Fluxo de inscrição será implementado em breve.");
                   }
                 }}
-                className="bg-gradient-to-r from-green-600 to-green-500 text-white px-4 py-3 rounded-lg hover:from-green-500 hover:to-green-400 flex items-center whitespace-nowrap font-semibold shadow-lg"
+                className="group bg-gradient-to-r from-accent-500 to-accent-400 text-dark-900 hover:from-accent-400 hover:to-accent-300 px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5 flex items-center whitespace-nowrap"
               >
-                <Zap className="mr-2" size={16} />
                 Inscrever-se
+                <ArrowUpRight
+                  size={18}
+                  className="ml-2 group-hover:translate-x-1 transition-transform"
+                />
               </button>
             )}
           </div>
         </div>
 
-        {/* Registrations List */}
+        {/* Registrations */}
         <div className="space-y-4">
           {Object.entries(
             filteredRegistrations.reduce((acc, reg) => {
@@ -1587,10 +1579,6 @@ const TournamentDetail: React.FC = () => {
       "all",
       ...Array.from(new Set(mockMatches.map((m) => m.court))),
     ];
-    const dates = [
-      "all",
-      ...Array.from(new Set(mockMatches.map((m) => m.date))),
-    ];
 
     return (
       <div className="space-y-6">
@@ -1643,7 +1631,7 @@ const TournamentDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Matches List */}
+        {/* Matches */}
         <div className="space-y-4">
           {filteredMatches.map((match, index) => (
             <div
@@ -1731,7 +1719,6 @@ const TournamentDetail: React.FC = () => {
             </div>
 
             <div className="p-6">
-              {/* Campeão */}
               <div className="text-center mb-6">
                 <div className="flex items-center justify-center mb-3">
                   <Crown className="text-yellow-500 mr-2" size={32} />
@@ -1745,7 +1732,6 @@ const TournamentDetail: React.FC = () => {
                 </p>
               </div>
 
-              {/* Placar da Final */}
               <div className="text-center mb-6 p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">Placar da Final</p>
                 <p className="text-xl font-bold text-gray-900">
@@ -1753,7 +1739,6 @@ const TournamentDetail: React.FC = () => {
                 </p>
               </div>
 
-              {/* Vice-campeão */}
               <div className="text-center">
                 <div className="flex items-center justify-center mb-2">
                   <Medal className="text-gray-400 mr-2" size={24} />
@@ -1841,82 +1826,142 @@ const TournamentDetail: React.FC = () => {
     </div>
   );
 
+  // ----------- RENDER -----------
+  const inscritosCount =
+    typeof tournament?.participantsCount === "number"
+      ? tournament.participantsCount
+      : mockRegistrations.length;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {user ? <DashboardHeader /> : <Navbar />}
 
-      {/* Hero Banner */}
-      <div className="relative h-64 md:h-80 bg-gradient-to-br from-purple-900 via-purple-800 to-purple-700 overflow-hidden">
+      {/* Hero Banner (mobile ganha margem para não ficar atrás do header) */}
+      <div className="relative mt-16 md:mt-0 h-52 md:h-80 bg-gradient-to-br from-purple-900 via-purple-800 to-purple-700 overflow-hidden">
         <div className="absolute inset-0 bg-black bg-opacity-30"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-purple-900/50 to-transparent"></div>
 
         <div className="relative h-full flex items-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div className="text-white mb-6 md:mb-0">
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">
+              <div className="text-white mb-3 md:mb-0">
+                <h1 className="text-3xl md:text-6xl font-black mb-2">
                   {tournament.name}
                 </h1>
-                <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-6 text-lg">
+
+                <div className="flex flex-col md:flex-row md:items-center space-y-1 md:space-y-0 md:space-x-6 text-base md:text-lg">
                   <div className="flex items-center">
-                    <MapPin className="mr-2" size={20} />
+                    <Building2 className="mr-2" size={20} />
                     <button
                       onClick={handleClubClick}
-                      className="hover:text-green-300 underline"
+                      className="hover:text-green-300"
                     >
                       {tournament.mainClub}
                     </button>
                   </div>
+
                   <div className="flex items-center">
-                    <Navigation className="mr-2" size={20} />
+                    <MapPin className="mr-2" size={20} />
                     <span>
-                      {tournament.location?.city || "São Paulo"}/
+                      {tournament.location?.city || "São Paulo"},{" "}
                       {tournament.location?.state || "SP"}
                     </span>
                   </div>
+
                   <div className="flex items-center">
                     <Calendar className="mr-2" size={20} />
                     <span>
-                      {new Date(tournament.startDate)
-                        .toLocaleDateString("pt-BR", {
-                          day: "numeric",
-                          month: "long",
-                        })
-                        .replace(" de ", " ")}{" "}
-                      -{" "}
-                      {new Date(tournament.endDate)
-                        .toLocaleDateString("pt-BR", {
-                          day: "numeric",
-                          month: "long",
-                        })
-                        .replace(" de ", " ")}
+                      {formatDateRange(
+                        tournament.startDate,
+                        tournament.endDate
+                      )}
                     </span>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-center">
-                {isCreator ? (
-                  <button className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-bold text-lg shadow-lg flex items-center">
-                    <Edit2 className="mr-2" size={20} />
-                    Editar
-                  </button>
-                ) : isAthlete ? (
-                  <button className="bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-lg hover:from-green-500 hover:to-green-400 font-bold text-lg shadow-lg">
-                    Inscreva-se
-                  </button>
-                ) : null}
+                <div className="flex items-center text-gray-200 mt-1">
+                  <Users className="mr-2" size={18} />
+                  <span>{inscritosCount} inscritos</span>
+                </div>
+
+                {/* CTA + Share no mobile (compacto) */}
+                {(isCreator || isAthlete || !user) && (
+                  <div className="mt-3 flex items-center gap-2 md:hidden">
+                    {isCreator ? (
+                      <button className="bg-accent-400 text-dark-900 px-4 py-2 text-sm rounded-lg font-semibold flex items-center shadow">
+                        <Edit2 size={16} className="mr-2" />
+                        Editar
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (!user) {
+                            alert("Faça login para se inscrever no torneio");
+                          } else {
+                            setActiveTab("inscritos");
+                            setSearchParams({ tab: "inscritos" });
+                          }
+                        }}
+                        className="bg-accent-400 text-dark-900 hover:bg-accent-300 px-4 py-2 text-sm rounded-lg font-semibold flex items-center shadow"
+                      >
+                        Inscrever-se
+                        <ArrowUpRight size={16} className="ml-1" />
+                      </button>
+                    )}
+
+                    <button
+                      onClick={handleShare}
+                      className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+                      title="Compartilhar torneio"
+                    >
+                      <Share2 size={18} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
+
+        {/* CTA desktop alinhado à direita */}
+        {(isCreator || isAthlete || !user) && (
+          <div className="hidden md:block absolute inset-x-0 bottom-4 z-10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-end">
+              {isCreator ? (
+                <button className="group bg-gradient-to-r from-accent-500 to-accent-400 text-dark-900 hover:from-accent-400 hover:to-accent-300 px-6 py-3 rounded-xl font-bold text-lg transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5 flex items-center">
+                  <Edit2 size={20} className="mr-2" />
+                  Editar
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (!user) {
+                      alert("Faça login para se inscrever no torneio");
+                    } else {
+                      setActiveTab("inscritos");
+                      setSearchParams({ tab: "inscritos" });
+                    }
+                  }}
+                  className="group bg-gradient-to-r from-accent-500 to-accent-400 text-dark-900 hover:from-accent-400 hover:to-accent-300 px-6 py-3 rounded-xl font-bold text-lg transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5 flex items-center"
+                >
+                  Inscrever-se
+                  <ArrowUpRight
+                    size={20}
+                    className="ml-2 group-hover:translate-x-1 transition-transform"
+                  />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Navigation Tabs */}
+      {/* Tabs */}
       <div className="bg-white shadow-sm border-b border-gray-200 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <div className="flex overflow-x-auto">
+            {/* Mobile: chips com wrap | Desktop: mesma UI anterior com scroll */}
+            <div className="flex flex-wrap gap-2 md:gap-0 md:flex-nowrap md:overflow-x-auto">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -1925,17 +1970,16 @@ const TournamentDetail: React.FC = () => {
                     key={tab.id}
                     onClick={() => {
                       setActiveTab(tab.id);
-                      // manter sub somente se for informações
                       setSearchParams({
                         tab: tab.id,
                         sub:
                           tab.id === "informacoes" ? activeSubTab : undefined,
                       });
                     }}
-                    className={`flex items-center px-4 py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    className={`flex items-center px-3 py-2 text-sm rounded-lg md:rounded-none md:px-4 md:py-4 md:text-sm whitespace-nowrap md:border-b-2 transition-colors ${
                       isActive
-                        ? "border-purple-600 text-purple-600"
-                        : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
+                        ? "bg-purple-50 text-purple-700 md:bg-transparent md:border-purple-600 md:text-purple-600"
+                        : "text-gray-600 hover:text-gray-900 md:border-transparent md:hover:border-gray-300"
                     }`}
                   >
                     <Icon className="mr-2" size={16} />
@@ -1944,9 +1988,11 @@ const TournamentDetail: React.FC = () => {
                 );
               })}
             </div>
+
+            {/* Share só no desktop aqui */}
             <button
               onClick={handleShare}
-              className="flex items-center px-4 py-2 text-gray-600 hover:text-purple-600 transition-colors"
+              className="hidden md:flex items-center px-4 py-2 text-gray-600 hover:text-purple-600 transition-colors"
               title="Compartilhar torneio"
             >
               <Share2 size={20} />
@@ -1955,33 +2001,36 @@ const TournamentDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Sub Navigation for Informações */}
+      {/* Subtabs */}
       {activeTab === "informacoes" && (
         <div className="bg-gray-50 border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex overflow-x-auto">
-              {subTabs.map((subTab) => (
-                <button
-                  key={subTab.id}
-                  onClick={() => {
-                    setActiveSubTab(subTab.id);
-                    setSearchParams({ tab: "informacoes", sub: subTab.id });
-                  }}
-                  className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                    activeSubTab === subTab.id
-                      ? "border-purple-600 text-purple-600 bg-white"
-                      : "border-transparent text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  {subTab.name}
-                </button>
-              ))}
+            <div className="flex flex-wrap gap-2 md:gap-0 md:flex-nowrap md:overflow-x-auto">
+              {subTabs.map((subTab) => {
+                const active = activeSubTab === subTab.id;
+                return (
+                  <button
+                    key={subTab.id}
+                    onClick={() => {
+                      setActiveSubTab(subTab.id);
+                      setSearchParams({ tab: "informacoes", sub: subTab.id });
+                    }}
+                    className={`px-3 py-2 text-sm rounded-lg md:rounded-none md:px-4 md:py-3 md:border-b-2 whitespace-nowrap transition-colors ${
+                      active
+                        ? "bg-purple-50 text-purple-700 md:bg-white md:border-purple-600 md:text-purple-600"
+                        : "text-gray-600 hover:text-gray-900 md:border-transparent"
+                    }`}
+                  >
+                    {subTab.name}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
       )}
 
-      {/* Main Content */}
+      {/* Main */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {renderContent()}
       </div>
