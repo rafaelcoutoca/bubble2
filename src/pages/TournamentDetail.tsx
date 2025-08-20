@@ -788,6 +788,98 @@ const TournamentDetail: React.FC = () => {
     }
   };
 
+  // --- Sidebar (Organizador) reutilizável ---
+  const renderSidebar = () => {
+    const inscritosCount =
+      typeof tournament?.participantsCount === "number"
+        ? tournament.participantsCount
+        : mockRegistrations.length;
+
+    return (
+      <div className="lg:col-span-1">
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 sticky top-32">
+          {/* Club Info */}
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Building2 className="text-purple-600" size={24} />
+            </div>
+            <button
+              onClick={handleClubClick}
+              className="font-bold text-purple-600 hover:text-purple-700 underline"
+            >
+              {tournament.mainClub}
+            </button>
+            <p className="text-gray-600 text-sm">Organizador</p>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="text-center p-3 bg-purple-50 rounded-lg">
+              <div className="text-xl font-bold text-purple-600">
+                {inscritosCount}
+              </div>
+              <div className="text-xs text-gray-600">Inscritos</div>
+            </div>
+            <div className="text-center p-3 bg-green-50 rounded-lg">
+              <div className="text-sm font-bold text-green-600">
+                R$ {tournament.registrationFee?.toFixed(2)}
+              </div>
+              <div className="text-xs text-gray-600">Inscrição</div>
+            </div>
+          </div>
+
+          {/* Contact Buttons */}
+          <div className="space-y-4 md:space-y-5 mb-10">
+            <Button variant="accentOutline" full leftIcon={<Phone size={16} />}>
+              WhatsApp
+            </Button>
+
+            <Button
+              onClick={handleClubClick}
+              variant="blueOutline"
+              full
+              leftIcon={<Building2 size={16} />}
+            >
+              Perfil do Clube
+            </Button>
+
+            <Button
+              variant="purpleOutline"
+              full
+              leftIcon={<Instagram size={16} />}
+            >
+              Instagram
+            </Button>
+          </div>
+
+          {/* Mini Map */}
+          <div className="mb-6">
+            <h4 className="font-semibold text-gray-900 mb-2">Localização</h4>
+            <div className="bg-gray-200 rounded-lg h-32 flex items-center justify-center">
+              <MapPin className="text-gray-500" size={24} />
+            </div>
+          </div>
+
+          {/* Mini Calendar */}
+          <div>
+            <h4 className="font-semibold text-gray-900 mb-2">Data do Evento</h4>
+            <div className="bg-purple-50 rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {new Date(tournament.startDate).getDate()}
+              </div>
+              <div className="text-sm text-purple-600">
+                {new Date(tournament.startDate).toLocaleDateString("pt-BR", {
+                  month: "short",
+                  year: "numeric",
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderInformacoes = () => {
     switch (activeSubTab) {
       case "gerais":
@@ -947,257 +1039,171 @@ const TournamentDetail: React.FC = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Organizador */}
-              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-                <div className="flex items-center mb-4">
-                  <Building2 className="text-purple-600 mr-3" size={24} />
-                  <h3 className="text-xl font-bold text-gray-900">
-                    Organizador
-                  </h3>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Building2 className="text-purple-600" size={24} />
-                  </div>
-                  <div className="flex-1">
-                    <button
-                      onClick={handleClubClick}
-                      className="font-bold text-purple-600 hover:text-purple-700 underline text-lg"
-                    >
-                      {tournament.mainClub}
-                    </button>
-                    <p className="text-gray-600">Clube de Padel</p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button className="p-2 bg-pink-100 text-pink-600 rounded-lg hover:bg-pink-200">
-                      <Instagram size={20} />
-                    </button>
-                    <button className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200">
-                      <Phone size={20} />
-                    </button>
-                    <button className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200">
-                      <Mail size={20} />
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 sticky top-32">
-                {/* Club Info */}
-                <div className="text-center mb-6">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Building2 className="text-purple-600" size={24} />
-                  </div>
-                  <button
-                    onClick={handleClubClick}
-                    className="font-bold text-purple-600 hover:text-purple-700 underline"
-                  >
-                    {tournament.mainClub}
-                  </button>
-                  <p className="text-gray-600 text-sm">Organizador</p>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="text-center p-3 bg-purple-50 rounded-lg">
-                    <div className="text-xl font-bold text-purple-600">
-                      {mockRegistrations.length}
-                    </div>
-                    <div className="text-xs text-gray-600">Inscritos</div>
-                  </div>
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <div className="text-sm font-bold text-green-600">
-                      R$ {tournament.registrationFee?.toFixed(2)}
-                    </div>
-                    <div className="text-xs text-gray-600">Inscrição</div>
-                  </div>
-                </div>
-
-                {/* Contact Buttons */}
-                <div className="space-y-4 md:space-y-5 mb-10">
-                  <Button
-                    variant="accentOutline"
-                    full
-                    leftIcon={<Phone size={16} />}
-                  >
-                    WhatsApp
-                  </Button>
-
-                  <Button
-                    onClick={handleClubClick}
-                    variant="blueOutline"
-                    full
-                    leftIcon={<Building2 size={16} />}
-                  >
-                    Perfil do Clube
-                  </Button>
-
-                  <Button
-                    variant="purpleOutline"
-                    full
-                    leftIcon={<Instagram size={16} />}
-                  >
-                    Instagram
-                  </Button>
-                </div>
-
-                {/* Mini Map */}
-                <div className="mb-6">
-                  <h4 className="font-semibold text-gray-900 mb-2">
-                    Localização
-                  </h4>
-                  <div className="bg-gray-200 rounded-lg h-32 flex items-center justify-center">
-                    <MapPin className="text-gray-500" size={24} />
-                  </div>
-                </div>
-
-                {/* Mini Calendar */}
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">
-                    Data do Evento
-                  </h4>
-                  <div className="bg-purple-50 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {new Date(tournament.startDate).getDate()}
-                    </div>
-                    <div className="text-sm text-purple-600">
-                      {new Date(tournament.startDate).toLocaleDateString(
-                        "pt-BR",
-                        { month: "short", year: "numeric" }
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {renderSidebar()}
           </div>
         );
+
       case "contato":
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">
-              Informações de Contato
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                <Phone className="text-green-600 mr-4" size={24} />
-                <div>
-                  <p className="font-semibold text-gray-900">Telefone</p>
-                  <p className="text-gray-600">(11) 9999-9999</p>
-                </div>
-              </div>
-              <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                <Mail className="text-blue-600 mr-4" size={24} />
-                <div>
-                  <p className="font-semibold text-gray-900">E-mail</p>
-                  <p className="text-gray-600">contato@clube.com</p>
-                </div>
-              </div>
-              <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                <Instagram className="text-pink-600 mr-4" size={24} />
-                <div>
-                  <p className="font-semibold text-gray-900">Instagram</p>
-                  <p className="text-gray-600">@clubepadel</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-6">
+                  Informações de Contato
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+                    <Phone className="text-green-600 mr-4" size={24} />
+                    <div>
+                      <p className="font-semibold text-gray-900">Telefone</p>
+                      <p className="text-gray-600">(11) 9999-9999</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+                    <Mail className="text-blue-600 mr-4" size={24} />
+                    <div>
+                      <p className="font-semibold text-gray-900">E-mail</p>
+                      <p className="text-gray-600">contato@clube.com</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+                    <Instagram className="text-pink-600 mr-4" size={24} />
+                    <div>
+                      <p className="font-semibold text-gray-900">Instagram</p>
+                      <p className="text-gray-600">@clubepadel</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+
+            {renderSidebar()}
           </div>
         );
+
       case "localizacao":
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">
-              Localização
-            </h3>
-            <div className="space-y-6">
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Endereço</h4>
-                <p className="text-gray-700">
-                  Rua das Quadras, 123
-                  <br />
-                  Bairro Esportivo
-                  <br />
-                  São Paulo - SP, 01234-567
-                </p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-6">
+                  Localização
+                </h3>
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">
+                      Endereço
+                    </h4>
+                    <p className="text-gray-700">
+                      Rua das Quadras, 123
+                      <br />
+                      Bairro Esportivo
+                      <br />
+                      São Paulo - SP, 01234-567
+                    </p>
+                  </div>
+                  <div className="bg-gray-200 rounded-lg h-64 flex items-center justify-center">
+                    <p className="text-gray-600">
+                      Mapa Interativo do Google Maps
+                    </p>
+                  </div>
+                  <button className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 flex items-center justify-center">
+                    <Navigation className="mr-2" size={20} />
+                    Abrir no Google Maps
+                  </button>
+                </div>
               </div>
-              <div className="bg-gray-200 rounded-lg h-64 flex items-center justify-center">
-                <p className="text-gray-600">Mapa Interativo do Google Maps</p>
-              </div>
-              <button className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 flex items-center justify-center">
-                <Navigation className="mr-2" size={20} />
-                Abrir no Google Maps
-              </button>
             </div>
+
+            {renderSidebar()}
           </div>
         );
+
       case "regras":
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">
-              Regras do Torneio
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Formato</h4>
-                <p className="text-gray-700">
-                  Fase de grupos seguida de mata-mata
-                </p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Pontuação</h4>
-                <p className="text-gray-700">
-                  Melhor de 3 sets, com tie-break no terceiro set
-                </p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  Equipamentos
-                </h4>
-                <p className="text-gray-700">
-                  Raquetes e bolas fornecidas pelo clube
-                </p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-6">
+                  Regras do Torneio
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">
+                      Formato
+                    </h4>
+                    <p className="text-gray-700">
+                      Fase de grupos seguida de mata-mata
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">
+                      Pontuação
+                    </h4>
+                    <p className="text-gray-700">
+                      Melhor de 3 sets, com tie-break no terceiro set
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">
+                      Equipamentos
+                    </h4>
+                    <p className="text-gray-700">
+                      Raquetes e bolas fornecidas pelo clube
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
+
+            {renderSidebar()}
           </div>
         );
+
       case "faq":
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">
-              Perguntas Frequentes
-            </h3>
-            <div className="space-y-4">
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  Como me inscrevo?
-                </h4>
-                <p className="text-gray-700">
-                  Clique no botão "Inscreva-se" e preencha o formulário.
-                </p>
-              </div>
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  Posso cancelar minha inscrição?
-                </h4>
-                <p className="text-gray-700">
-                  Sim, até 48 horas antes do início do torneio.
-                </p>
-              </div>
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  Preciso levar equipamentos?
-                </h4>
-                <p className="text-gray-700">
-                  Não, raquetes e bolas são fornecidas pelo clube.
-                </p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-6">
+                  Perguntas Frequentes
+                </h3>
+                <div className="space-y-4">
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-2">
+                      Como me inscrevo?
+                    </h4>
+                    <p className="text-gray-700">
+                      Clique no botão "Inscreva-se" e preencha o formulário.
+                    </p>
+                  </div>
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-2">
+                      Posso cancelar minha inscrição?
+                    </h4>
+                    <p className="text-gray-700">
+                      Sim, até 48 horas antes do início do torneio.
+                    </p>
+                  </div>
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-2">
+                      Preciso levar equipamentos?
+                    </h4>
+                    <p className="text-gray-700">
+                      Não, raquetes e bolas são fornecidas pelo clube.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
+
+            {renderSidebar()}
           </div>
         );
+
       default:
         return null;
     }
