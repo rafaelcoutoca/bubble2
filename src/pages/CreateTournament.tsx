@@ -119,14 +119,30 @@ const CreateTournament: React.FC = () => {
   }, [profile]);
 
   // gera a grade de horários quando o período muda
+  // gera a grade de horários quando o período muda (datas puras, sem fuso)
   useEffect(() => {
+    const ymdToUTC = (ymd: string) => {
+      const [y, m, d] = ymd.split("-").map(Number);
+      return new Date(Date.UTC(y, m - 1, d));
+    };
+    const toYMD = (dt: Date) =>
+      `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(
+        2,
+        "0"
+      )}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+
     if (tournamentData.startDate && tournamentData.endDate) {
-      const start = new Date(tournamentData.startDate);
-      const end = new Date(tournamentData.endDate);
+      const start = ymdToUTC(tournamentData.startDate);
+      const end = ymdToUTC(tournamentData.endDate);
       const schedules: TournamentData["dailySchedules"] = [];
 
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dateStr = d.toISOString().split("T")[0];
+      // percorre de start..end em UTC
+      for (
+        let d = new Date(start);
+        d.getTime() <= end.getTime();
+        d.setUTCDate(d.getUTCDate() + 1)
+      ) {
+        const dateStr = toYMD(d);
         const existing = tournamentData.dailySchedules.find(
           (s) => s.date === dateStr
         );
@@ -283,7 +299,12 @@ const CreateTournament: React.FC = () => {
       ...tournamentData, // inclui sport, startDate, endDate etc.
       status: "scheduled",
       participantsCount: 0,
-      maxParticipants: tournamentData.maxParticipants ?? 64,
+      // se não tiver limite, salva null; se tiver, salva o número
+      maxParticipants: tournamentData.hasParticipantLimit
+        ? typeof tournamentData.maxParticipants === "number"
+          ? tournamentData.maxParticipants
+          : null
+        : null,
       createdAt: new Date().toISOString(),
       location: {
         city: p.city || "São Paulo",
@@ -406,7 +427,7 @@ const CreateTournament: React.FC = () => {
                       <div className="flex-1">
                         <span className="text-sm font-semibold text-dark-700">
                           {new Date(
-                            schedule.date + "T00:00:00"
+                            schedule.date + "T00:00:00Z"
                           ).toLocaleDateString("pt-BR", {
                             weekday: "long",
                             day: "2-digit",

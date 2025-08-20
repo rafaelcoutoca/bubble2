@@ -25,38 +25,50 @@ const MONTHS_ABBR = [
   "Dez",
 ];
 
-function parseISO(d?: string) {
+/** Parse seguro:
+ *  - "YYYY-MM-DD" => cria como UTC (não anda 1 dia em fusos negativos)
+ *  - outras strings => new Date(...)
+ */
+function parseDateInput(d?: string) {
   if (!d) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    const [y, m, day] = d.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, day));
+    // ↑ data "pura" em UTC
+  }
   const dt = new Date(d);
   return isNaN(dt.getTime()) ? null : dt;
 }
-function formatDateAbbrev(d: Date) {
-  const day = d.getDate();
-  const mon = MONTHS_ABBR[d.getMonth()];
-  const year = d.getFullYear();
+
+function formatDateAbbrevUTC(d: Date) {
+  const day = d.getUTCDate();
+  const mon = MONTHS_ABBR[d.getUTCMonth()];
+  const year = d.getUTCFullYear();
   return `${day} ${mon} ${year}`;
 }
-function sameYMD(a: Date, b: Date) {
+
+function sameYMDUTC(a: Date, b: Date) {
   return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
   );
 }
+
 function formatRangeAbbrev(start?: string, end?: string) {
-  const s = parseISO(start);
-  const e = parseISO(end) || s;
+  const s = parseDateInput(start);
+  const e = parseDateInput(end) || s;
   if (!s) return "";
-  if (e && sameYMD(s, e)) return formatDateAbbrev(s);
+  if (e && sameYMDUTC(s, e)) return formatDateAbbrevUTC(s);
   if (
     e &&
-    s.getFullYear() === e.getFullYear() &&
-    s.getMonth() === e.getMonth()
+    s.getUTCFullYear() === e.getUTCFullYear() &&
+    s.getUTCMonth() === e.getUTCMonth()
   ) {
-    const right = `${MONTHS_ABBR[e.getMonth()]} ${e.getFullYear()}`;
-    return `${s.getDate()} a ${e.getDate()} ${right}`;
+    const right = `${MONTHS_ABBR[e.getUTCMonth()]} ${e.getUTCFullYear()}`;
+    return `${s.getUTCDate()} a ${e.getUTCDate()} ${right}`;
   }
-  return `${formatDateAbbrev(s)} – ${formatDateAbbrev(e!)}`;
+  return `${formatDateAbbrevUTC(s)} – ${formatDateAbbrevUTC(e!)}`;
 }
 
 /** Cores por esporte (badge com fundo) */
@@ -121,13 +133,24 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
     }
   };
 
-  // dados completos do torneio no LS (para obter club_id)
+  // dados completos do torneio no LS (para obter club_id e limite)
   const clubTournaments = JSON.parse(
     localStorage.getItem("clubTournaments") || "[]"
   );
   const tournamentData = clubTournaments.find((t: any) => t.id === id);
-  const hasParticipantLimit =
-    tournamentData?.hasParticipantLimit && tournamentData?.maxParticipants;
+
+  // Limite somente quando:
+  // - hasParticipantLimit === true
+  // - maxParticipants é número finito
+  const hasLimit =
+    Boolean(tournamentData?.hasParticipantLimit) &&
+    typeof tournamentData?.maxParticipants === "number" &&
+    Number.isFinite(tournamentData.maxParticipants);
+
+  const maxParticipants: number | null = hasLimit
+    ? Number(tournamentData.maxParticipants)
+    : null;
+
   const clubId: string | undefined = tournamentData?.club_id;
 
   const canRegister = status === "open";
@@ -227,10 +250,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
           <Users size={18} className="mr-2 text-primary-600" />
           <span>
             {participantsCount}
-            {hasParticipantLimit
-              ? ` / ${tournamentData.maxParticipants}`
-              : ""}{" "}
-            inscritos
+            {hasLimit ? ` / ${maxParticipants}` : ""} inscritos
           </span>
         </div>
       </div>
@@ -257,7 +277,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              // aqui você pode abrir o fluxo de inscrição direto
+              // fluxo de inscrição direto (quando implementar)
             }}
             className={`${
               canRegister
@@ -271,14 +291,12 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
           </button>
         </div>
 
-        {hasParticipantLimit && (
+        {hasLimit && (
           <div className="mt-3">
             <div className="flex justify-between text-xs text-dark-500 mb-1">
               <span>Ocupação</span>
               <span>
-                {Math.round(
-                  (participantsCount / tournamentData.maxParticipants) * 100
-                )}
+                {Math.round((participantsCount / (maxParticipants || 1)) * 100)}
                 % ocupado
               </span>
             </div>
@@ -287,7 +305,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
                 className="bg-accent-600 h-2 rounded-full transition-all duration-300"
                 style={{
                   width: `${Math.min(
-                    (participantsCount / tournamentData.maxParticipants) * 100,
+                    (participantsCount / (maxParticipants || 1)) * 100,
                     100
                   )}%`,
                 }}
