@@ -788,12 +788,57 @@ const TournamentDetail: React.FC = () => {
     }
   };
 
+  // Utils bem simples pra linkar corretamente
+  const formatPhoneForWhatsApp = (raw?: string) => {
+    if (!raw) return null;
+    // remove tudo que não for número
+    let digits = raw.replace(/\D/g, "");
+    // se já tiver DDI (ex.: 55...), mantém. Se só tiver 10/11 dígitos, presume BR (55).
+    if (digits.length <= 11) digits = "55" + digits;
+    return `https://wa.me/${digits}`;
+  };
+
+  const instagramToUrl = (handleOrUrl?: string) => {
+    if (!handleOrUrl) return null;
+    // aceita @usuario, usuario ou url completa
+    if (handleOrUrl.startsWith("http")) return handleOrUrl;
+    const handle = handleOrUrl.replace(/^@/, "");
+    return `https://instagram.com/${handle}`;
+  };
+
   // --- Sidebar (Organizador) reutilizável ---
   const renderSidebar = () => {
+    // dados do organizador (clube criador) com fallbacks
+    const organizerName =
+      tournament?.club?.name || tournament?.mainClub || "Clube Organizador";
+
+    const phone =
+      tournament?.club?.phone ||
+      tournament?.clubContact?.phone ||
+      tournament?.phone ||
+      null;
+
+    const email =
+      tournament?.club?.email ||
+      tournament?.clubContact?.email ||
+      tournament?.email ||
+      null;
+
+    const instagram =
+      tournament?.club?.instagram ||
+      tournament?.clubContact?.instagram ||
+      tournament?.instagram ||
+      null;
+
+    const waLink = formatPhoneForWhatsApp(phone); // null se não houver
+    const igLink = instagramToUrl(instagram); // null se não houver
+
     const inscritosCount =
       typeof tournament?.participantsCount === "number"
         ? tournament.participantsCount
         : mockRegistrations.length;
+
+    const openNewTab = (url: string) => window.open(url, "_blank", "noopener");
 
     return (
       <div className="lg:col-span-1">
@@ -807,7 +852,7 @@ const TournamentDetail: React.FC = () => {
               onClick={handleClubClick}
               className="font-bold text-purple-600 hover:text-purple-700 underline"
             >
-              {tournament.mainClub}
+              {organizerName}
             </button>
             <p className="text-gray-600 text-sm">Organizador</p>
           </div>
@@ -830,8 +875,14 @@ const TournamentDetail: React.FC = () => {
 
           {/* Contact Buttons */}
           <div className="space-y-4 md:space-y-5 mb-10">
-            <Button variant="accentOutline" full leftIcon={<Phone size={16} />}>
-              WhatsApp
+            <Button
+              variant="accentOutline"
+              full
+              leftIcon={<Phone size={16} />}
+              onClick={() => waLink && openNewTab(waLink)}
+              disabled={!waLink}
+            >
+              {phone ? "WhatsApp" : "WhatsApp indisponível"}
             </Button>
 
             <Button
@@ -847,8 +898,22 @@ const TournamentDetail: React.FC = () => {
               variant="purpleOutline"
               full
               leftIcon={<Instagram size={16} />}
+              onClick={() => igLink && openNewTab(igLink)}
+              disabled={!igLink}
             >
-              Instagram
+              {instagram ? "Instagram" : "Instagram indisponível"}
+            </Button>
+
+            <Button
+              variant="blueOutline"
+              full
+              leftIcon={<Mail size={16} />}
+              onClick={() =>
+                email && (window.location.href = `mailto:${email}`)
+              }
+              disabled={!email}
+            >
+              {email ? "E-mail" : "E-mail indisponível"}
             </Button>
           </div>
 
