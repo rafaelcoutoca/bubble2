@@ -28,7 +28,7 @@ type ClubProfile = {
 
 interface TournamentData {
   name: string;
-  tournamentType: "regular" | "super8";
+  tournamentType: "regular" | "elimination" | "super8";
   startDate: string;
   endDate: string;
   dailySchedules: Array<{ date: string; startTime: string; endTime: string }>;
@@ -306,92 +306,48 @@ const CreateTournament: React.FC = () => {
               Informações Essenciais
             </h2>
 
-            <div>
-              <label className="block text-sm font-semibold text-dark-700 mb-2">
-                Tipo de Torneio
-              </label>
-              <div className="flex items-center space-x-6 mb-4">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="tournamentType"
-                    value="regular"
-                    checked={tournamentData.tournamentType === "regular"}
-                    onChange={(e) =>
-                      handleInputChange("tournamentType", e.target.value)
-                    }
-                    className="sr-only"
-                  />
-                  <div
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      tournamentData.tournamentType === "regular"
-                        ? "bg-primary-600"
-                        : "bg-gray-300"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        tournamentData.tournamentType === "regular"
-                          ? "translate-x-6"
-                          : "translate-x-1"
-                      }`}
-                    />
-                  </div>
-                  <span className="ml-2 text-sm font-medium text-dark-700">
-                    Regular
-                  </span>
+            {/* Esporte e Tipo de Torneio na mesma linha */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-dark-700 mb-2">
+                  Esporte *
                 </label>
+                <select
+                  value={tournamentData.sport}
+                  onChange={(e) => handleInputChange("sport", e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                  required
+                >
+                  <option value="Padel">Padel</option>
+                  <option value="Beach Tennis">Beach Tennis</option>
+                  <option value="Tenis">Tênis</option>
+                  <option value="Pickleball">Pickleball</option>
+                </select>
+              </div>
 
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="tournamentType"
-                    value="super8"
-                    checked={tournamentData.tournamentType === "super8"}
-                    onChange={(e) =>
-                      handleInputChange("tournamentType", e.target.value)
-                    }
-                    className="sr-only"
-                  />
-                  <div
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      tournamentData.tournamentType === "super8"
-                        ? "bg-purple-600"
-                        : "bg-gray-300"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        tournamentData.tournamentType === "super8"
-                          ? "translate-x-6"
-                          : "translate-x-1"
-                      }`}
-                    />
-                  </div>
-                  <span className="ml-2 text-sm font-medium text-dark-700">
-                    Super 8
-                  </span>
+              <div>
+                <label className="block text-sm font-semibold text-dark-700 mb-2">
+                  Tipo de Torneio *
                 </label>
+                <select
+                  value={tournamentData.tournamentType}
+                  onChange={(e) =>
+                    handleInputChange("tournamentType", e.target.value)
+                  }
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                  required
+                >
+                  <option value="regular">Regular (Grupo + Playoffs)</option>
+                  <option value="elimination">Eliminatórias Diretas</option>
+                  <option value="super8">Super 8</option>
+                </select>
               </div>
             </div>
 
-            {/* NOVO: Esporte */}
             <div>
               <label className="block text-sm font-semibold text-dark-700 mb-2">
-                Esporte
+                Nome do Torneio *
               </label>
-              <select
-                value={tournamentData.sport}
-                onChange={(e) => handleInputChange("sport", e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-              >
-                <option value="Padel">Padel</option>
-                <option value="Beach Tennis">Beach Tennis</option>
-                <option value="Tênis">Tênis</option>
-              </select>
-            </div>
-
-            <div>
               <input
                 type="text"
                 value={tournamentData.name}
