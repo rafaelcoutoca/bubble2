@@ -31,12 +31,78 @@ import {
   Trash2,
   ArrowUpRight,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+
+// ==============================
+// Tipos
+// ==============================
+type MatchStatus = "completed" | "scheduled";
+
+type Match = {
+  id: string;
+  team1: string;
+  team2: string;
+  score: string;
+  status: MatchStatus;
+  team1Score: number[];
+  team2Score: number[];
+  winner: 1 | 2 | null;
+  court?: string;
+  date?: string;
+  time?: string;
+  category?: string;
+  group?: string;
+};
+
+type Registration = {
+  id: string;
+  category: string;
+  player1: { name: string; city: string; avatar: string };
+  player2: { name: string; city: string; avatar: string };
+  paymentStatus: "confirmed" | "pending";
+};
+
+type GroupRow = {
+  name: string;
+  wins: number;
+  gamesFor: number;
+  gamesAgainst: number;
+  position: number;
+};
+
+type Group = {
+  name: string;
+  category: string;
+  teams: GroupRow[];
+  matches: Match[];
+};
+
+type TournamentDetailData = {
+  id: string;
+  name: string;
+  club_id?: string;
+  mainClub?: string;
+  description?: string;
+  categories?: string[];
+  registrationFee?: number;
+  participantsCount?: number;
+  startDate: string;
+  endDate?: string;
+  location?: { city?: string; state?: string };
+
+  club?: { name?: string; phone?: string; email?: string; instagram?: string };
+  clubContact?: { phone?: string; email?: string; instagram?: string };
+
+  phone?: string;
+  email?: string;
+  instagram?: string;
+};
 
 interface ScoreEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  match: any;
+  match: Match | null;
   onSave: (
     matchId: string,
     team1Score: number[],
@@ -93,49 +159,36 @@ const ScoreEditModal: React.FC<ScoreEditModalProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {match.team1}
-              </label>
-              {[0, 1, 2].map((setIndex) => (
-                <input
-                  key={setIndex}
-                  type="number"
-                  min="0"
-                  max="7"
-                  value={team1Sets[setIndex]}
-                  onChange={(e) => {
-                    const newSets = [...team1Sets];
-                    newSets[setIndex] = parseInt(e.target.value) || 0;
-                    setTeam1Sets(newSets);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md mb-2"
-                  placeholder={`Set ${setIndex + 1}`}
-                />
-              ))}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {match.team2}
-              </label>
-              {[0, 1, 2].map((setIndex) => (
-                <input
-                  key={setIndex}
-                  type="number"
-                  min="0"
-                  max="7"
-                  value={team2Sets[setIndex]}
-                  onChange={(e) => {
-                    const newSets = [...team2Sets];
-                    newSets[setIndex] = parseInt(e.target.value) || 0;
-                    setTeam2Sets(newSets);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md mb-2"
-                  placeholder={`Set ${setIndex + 1}`}
-                />
-              ))}
-            </div>
+            {[match.team1, match.team2].map((team, idx) => (
+              <div key={idx}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {team}
+                </label>
+                {[0, 1, 2].map((setIndex) => (
+                  <input
+                    key={setIndex}
+                    type="number"
+                    min="0"
+                    max="7"
+                    value={
+                      idx === 0 ? team1Sets[setIndex] : team2Sets[setIndex]
+                    }
+                    onChange={(e) => {
+                      const newSets =
+                        idx === 0 ? [...team1Sets] : [...team2Sets];
+                      newSets[setIndex] = parseInt(e.target.value) || 0;
+                      if (idx === 0) {
+                        setTeam1Sets(newSets);
+                      } else {
+                        setTeam2Sets(newSets);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md mb-2"
+                    placeholder={`Set ${setIndex + 1}`}
+                  />
+                ))}
+              </div>
+            ))}
           </div>
 
           <div className="flex justify-end space-x-3 pt-4">
@@ -270,20 +323,26 @@ const AddTeamModal: React.FC<AddTeamModalProps> = ({
   );
 };
 
+// ==============================
+// TournamentDetail
+// ==============================
 const TournamentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile } = useAuth();
-  const [tournament, setTournament] = useState<any>(null);
+
+  const [tournament, setTournament] = useState<TournamentDetailData | null>(
+    null
+  );
   const [activeTab, setActiveTab] = useState("informacoes");
   const [activeSubTab, setActiveSubTab] = useState("gerais");
   const [loading, setLoading] = useState(true);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
-  const [selectedMatch, setSelectedMatch] = useState<any>(null);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
 
-  // Filters
+  // Filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedCourt, setSelectedCourt] = useState("all");
@@ -291,10 +350,10 @@ const TournamentDetail: React.FC = () => {
 
   // Roles
   const isCreator =
-    user && profile?.user_type === "club" && tournament?.club_id === user.id;
-  const isAthlete = user && profile?.user_type === "athlete";
+    !!user && profile?.user_type === "club" && tournament?.club_id === user.id;
+  const isAthlete = !!user && profile?.user_type === "athlete";
 
-  // Sync tabs from URL
+  // Sincroniza abas via URL
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get("tab") || undefined;
@@ -312,7 +371,8 @@ const TournamentDetail: React.FC = () => {
     if (tab && validTabs.includes(tab) && tab !== activeTab) setActiveTab(tab);
     if (sub && validSubs.includes(sub) && sub !== activeSubTab)
       setActiveSubTab(sub);
-  }, [location.search]); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   const setSearchParams = (next: { tab?: string; sub?: string }) => {
     const params = new URLSearchParams(location.search);
@@ -326,12 +386,16 @@ const TournamentDetail: React.FC = () => {
     );
   };
 
+  // Carrega torneio do localStorage
   useEffect(() => {
     const loadTournament = () => {
       const clubTournaments = JSON.parse(
         localStorage.getItem("clubTournaments") || "[]"
+      ) as TournamentDetailData[];
+
+      const foundTournament = clubTournaments.find(
+        (t) => String(t.id) === String(id)
       );
-      const foundTournament = clubTournaments.find((t: any) => t.id === id);
 
       if (foundTournament) {
         if (
@@ -348,7 +412,8 @@ const TournamentDetail: React.FC = () => {
     loadTournament();
   }, [id]);
 
-  const handleEditScore = (match: any) => {
+  // Ações Modais
+  const handleEditScore = (match: Match) => {
     setSelectedMatch(match);
     setEditModalOpen(true);
   };
@@ -373,8 +438,8 @@ const TournamentDetail: React.FC = () => {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: tournament.name,
-        text: `Confira este torneio de padel: ${tournament.name}`,
+        title: tournament?.name ?? "Torneio",
+        text: `Confira este torneio de padel: ${tournament?.name ?? ""}`,
         url: window.location.href,
       });
     } else {
@@ -414,7 +479,8 @@ const TournamentDetail: React.FC = () => {
     );
   }
 
-  const tabs = [
+  // Tabs
+  const tabs: { id: string; name: string; icon: LucideIcon }[] = [
     { id: "informacoes", name: "Informações", icon: Info },
     { id: "inscritos", name: "Inscritos", icon: Users },
     { id: "grupos", name: "Grupos", icon: Trophy },
@@ -431,8 +497,8 @@ const TournamentDetail: React.FC = () => {
     { id: "faq", name: "FAQ" },
   ];
 
-  // --- Mock data (mantido) ---
-  const mockGroups = [
+  // ===== Mocks (tipados) =====
+  const mockGroups: Group[] = [
     {
       name: "Grupo A",
       category: "Open Masculina",
@@ -543,7 +609,7 @@ const TournamentDetail: React.FC = () => {
     },
   ];
 
-  const mockRegistrations = [
+  const mockRegistrations: Registration[] = [
     {
       id: "1",
       category: "Open Masculina",
@@ -614,7 +680,7 @@ const TournamentDetail: React.FC = () => {
     },
   ];
 
-  const mockMatches = [
+  const mockMatches: Match[] = [
     {
       id: "MATCH001",
       team1: "João Silva / Pedro Santos",
@@ -627,6 +693,8 @@ const TournamentDetail: React.FC = () => {
       category: "Open Masculina",
       group: "Grupo A",
       winner: 1,
+      team1Score: [6, 6],
+      team2Score: [4, 3],
     },
     {
       id: "MATCH002",
@@ -640,10 +708,17 @@ const TournamentDetail: React.FC = () => {
       category: "Open Feminina",
       group: "Grupo B",
       winner: null,
+      team1Score: [],
+      team2Score: [],
     },
   ];
 
-  const mockChampions = [
+  const mockChampions: {
+    category: string;
+    champion: string;
+    runnerUp: string;
+    finalScore: string;
+  }[] = [
     {
       category: "Open Masculina",
       champion: "João Silva / Pedro Santos",
@@ -658,7 +733,15 @@ const TournamentDetail: React.FC = () => {
     },
   ];
 
-  const mockLiveCourts = [
+  interface LiveCourt {
+    id: string;
+    name: string;
+    status: "Ao Vivo" | "Próximo" | "Livre";
+    match: string | null;
+    streamUrl: string | null;
+  }
+
+  const mockLiveCourts: LiveCourt[] = [
     {
       id: "1",
       name: "Quadra Central",
@@ -729,7 +812,7 @@ const TournamentDetail: React.FC = () => {
     )} ${end.getFullYear()}`;
   };
 
-  const getFilteredRegistrations = () => {
+  const getFilteredRegistrations = (): Registration[] => {
     return mockRegistrations.filter((reg) => {
       const matchesCategory =
         selectedCategory === "all" || reg.category === selectedCategory;
@@ -741,7 +824,7 @@ const TournamentDetail: React.FC = () => {
     });
   };
 
-  const getFilteredGroups = () => {
+  const getFilteredGroups = (): Group[] => {
     return mockGroups.filter((group) => {
       const matchesCategory =
         selectedCategory === "all" || group.category === selectedCategory;
@@ -754,7 +837,7 @@ const TournamentDetail: React.FC = () => {
     });
   };
 
-  const getFilteredMatches = () => {
+  const getFilteredMatches = (): Match[] => {
     return mockMatches.filter((match) => {
       const matchesCategory =
         selectedCategory === "all" || match.category === selectedCategory;
@@ -769,46 +852,23 @@ const TournamentDetail: React.FC = () => {
     });
   };
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case "informacoes":
-        return renderInformacoes();
-      case "inscritos":
-        return renderInscritos();
-      case "grupos":
-        return renderGrupos();
-      case "jogos":
-        return renderJogos();
-      case "resultados":
-        return renderResultados();
-      case "ao-vivo":
-        return renderAoVivo();
-      default:
-        return renderInformacoes();
-    }
-  };
-
   // Utils bem simples pra linkar corretamente
   const formatPhoneForWhatsApp = (raw?: string) => {
     if (!raw) return null;
-    // remove tudo que não for número
     let digits = raw.replace(/\D/g, "");
-    // se já tiver DDI (ex.: 55...), mantém. Se só tiver 10/11 dígitos, presume BR (55).
     if (digits.length <= 11) digits = "55" + digits;
     return `https://wa.me/${digits}`;
   };
 
   const instagramToUrl = (handleOrUrl?: string) => {
     if (!handleOrUrl) return null;
-    // aceita @usuario, usuario ou url completa
     if (handleOrUrl.startsWith("http")) return handleOrUrl;
     const handle = handleOrUrl.replace(/^@/, "");
     return `https://instagram.com/${handle}`;
   };
 
-  // --- Sidebar (Organizador) reutilizável ---
+  // --- Sidebar (Organizador) ---
   const renderSidebar = () => {
-    // dados do organizador (clube criador) com fallbacks
     const organizerName =
       tournament?.club?.name || tournament?.mainClub || "Clube Organizador";
 
@@ -830,12 +890,12 @@ const TournamentDetail: React.FC = () => {
       tournament?.instagram ||
       null;
 
-    const waLink = formatPhoneForWhatsApp(phone); // null se não houver
-    const igLink = instagramToUrl(instagram); // null se não houver
+    const waLink = formatPhoneForWhatsApp(phone || undefined);
+    const igLink = instagramToUrl(instagram || undefined);
 
     const inscritosCount =
       typeof tournament?.participantsCount === "number"
-        ? tournament.participantsCount
+        ? tournament.participantsCount!
         : mockRegistrations.length;
 
     const openNewTab = (url: string) => window.open(url, "_blank", "noopener");
@@ -945,6 +1005,7 @@ const TournamentDetail: React.FC = () => {
     );
   };
 
+  // -------- Renderizações por aba --------
   const renderInformacoes = () => {
     switch (activeSubTab) {
       case "gerais":
@@ -995,9 +1056,9 @@ const TournamentDetail: React.FC = () => {
                         Fim das Inscrições
                       </p>
                       <p className="text-gray-600">
-                        {new Date(tournament.endDate).toLocaleDateString(
-                          "pt-BR"
-                        )}
+                        {new Date(
+                          tournament.endDate || tournament.startDate
+                        ).toLocaleDateString("pt-BR")}
                       </p>
                     </div>
                   </div>
@@ -1034,41 +1095,50 @@ const TournamentDetail: React.FC = () => {
                     Taxas de Inscrição
                   </h3>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                          Categoria
-                        </th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                          Valor
-                        </th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tournament.categories?.map(
-                        (category: string, index: number) => (
-                          <tr key={index} className="border-t border-gray-200">
-                            <td className="px-4 py-3 font-medium text-gray-900">
-                              {category}
-                            </td>
-                            <td className="px-4 py-3 text-green-600 font-bold">
-                              R$ {tournament.registrationFee?.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
-                                Disponível
-                              </span>
-                            </td>
-                          </tr>
-                        )
-                      )}
-                    </tbody>
-                  </table>
+                {/* Área rolável só das categorias */}
+                <div className="relative">
+                  {/* limite de altura + rolagem vertical + evita scroll da página */}
+                  <div className="max-h-72 md:max-h-96 overflow-y-auto overscroll-contain pr-2">
+                    <table className="w-full">
+                      <thead className="sticky top-0 bg-white z-10">
+                        <tr className="bg-gray-50">
+                          <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                            Categoria
+                          </th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                            Valor
+                          </th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(tournament.categories || ["Open Masculina"]).map(
+                          (category, index) => (
+                            <tr
+                              key={index}
+                              className="border-t border-gray-200"
+                            >
+                              <td className="px-4 py-3 font-medium text-gray-900">
+                                {category}
+                              </td>
+                              <td className="px-4 py-3 text-green-600 font-bold">
+                                R${" "}
+                                {tournament.registrationFee?.toFixed(2) ??
+                                  "0,00"}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
+                                  Disponível
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
 
@@ -1087,7 +1157,7 @@ const TournamentDetail: React.FC = () => {
                         onClick={handleClubClick}
                         className="font-bold text-purple-600 hover:text-purple-700 underline"
                       >
-                        {tournament.mainClub}
+                        {tournament.mainClub || "Clube"}
                       </button>
                       <br />
                       Rua das Quadras, 123
@@ -1313,16 +1383,18 @@ const TournamentDetail: React.FC = () => {
                 ))}
               </select>
             </div>
+
             {isCreator && (
               <button
                 onClick={() => setAddTeamModalOpen(true)}
-                className="bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 flex items-center whitespace-nowrap"
+                className="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 flex items-center whitespace-nowrap"
               >
                 <Plus className="mr-2" size={16} />
-                Adicionar Dupla
+                Adicionar Atleta
               </button>
             )}
-            {(isAthlete || !user) && (
+
+            {(isAthlete || !user) && !isCreator && (
               <button
                 onClick={() => {
                   if (!user) {
@@ -1348,11 +1420,14 @@ const TournamentDetail: React.FC = () => {
         {/* Registrations */}
         <div className="space-y-4">
           {Object.entries(
-            filteredRegistrations.reduce((acc, reg) => {
-              if (!acc[reg.category]) acc[reg.category] = [];
-              acc[reg.category].push(reg);
-              return acc;
-            }, {} as Record<string, typeof mockRegistrations>)
+            filteredRegistrations.reduce(
+              (acc: Record<string, Registration[]>, reg) => {
+                if (!acc[reg.category]) acc[reg.category] = [];
+                acc[reg.category].push(reg);
+                return acc;
+              },
+              {}
+            )
           ).map(([category, registrations]) => (
             <div
               key={category}
@@ -1519,8 +1594,12 @@ const TournamentDetail: React.FC = () => {
               className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden"
             >
               <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-4">
-                <h3 className="text-lg font-bold">{group.name}</h3>
-                <p className="text-purple-100 text-sm">{group.category}</p>
+                <div className="flex items-baseline justify-between">
+                  <h3 className="text-lg font-bold">{group.name}</h3>
+                  <span className="text-purple-100 text-xs md:text-sm font-medium">
+                    {group.category}
+                  </span>
+                </div>
               </div>
 
               <div className="p-4">
@@ -1538,7 +1617,7 @@ const TournamentDetail: React.FC = () => {
                           Saldo
                         </th>
                         <th className="text-center py-2 font-semibold text-gray-700">
-                          G.Pro
+                          Games
                         </th>
                       </tr>
                     </thead>
@@ -1575,10 +1654,24 @@ const TournamentDetail: React.FC = () => {
                           <td className="text-center py-2 font-semibold">
                             {team.wins}
                           </td>
-                          <td className="text-center py-2 text-blue-600 font-semibold">
-                            {team.gamesFor - team.gamesAgainst > 0 ? "+" : ""}
-                            {team.gamesFor - team.gamesAgainst}
-                          </td>
+                          {(() => {
+                            const saldo = team.gamesFor - team.gamesAgainst;
+                            const saldoClass =
+                              saldo > 0
+                                ? "text-gray-900"
+                                : saldo < 0
+                                ? "text-red-600"
+                                : "text-gray-600";
+                            return (
+                              <td
+                                className={`text-center py-2 font-semibold ${saldoClass}`}
+                              >
+                                {saldo > 0 ? "+" : ""}
+                                {saldo}
+                              </td>
+                            );
+                          })()}
+
                           <td className="text-center py-2 font-semibold">
                             {team.gamesFor}
                           </td>
@@ -1593,11 +1686,8 @@ const TournamentDetail: React.FC = () => {
                     Jogos
                   </h4>
                   <div className="space-y-2">
-                    {group.matches.map((match, matchIndex) => (
-                      <div
-                        key={matchIndex}
-                        className="bg-gray-50 rounded-lg p-3"
-                      >
+                    {group.matches.map((match) => (
+                      <div key={match.id} className="bg-gray-50 rounded-lg p-3">
                         <div className="space-y-2">
                           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                             <div className="flex-1">
@@ -1644,11 +1734,15 @@ const TournamentDetail: React.FC = () => {
     const filteredMatches = getFilteredMatches();
     const categories = [
       "all",
-      ...Array.from(new Set(mockMatches.map((m) => m.category))),
+      ...Array.from(new Set(mockMatches.map((m) => m.category || ""))).filter(
+        Boolean
+      ),
     ];
     const courts = [
       "all",
-      ...Array.from(new Set(mockMatches.map((m) => m.court))),
+      ...Array.from(new Set(mockMatches.map((m) => m.court || ""))).filter(
+        Boolean
+      ),
     ];
 
     return (
@@ -1704,9 +1798,9 @@ const TournamentDetail: React.FC = () => {
 
         {/* Matches */}
         <div className="space-y-4">
-          {filteredMatches.map((match, index) => (
+          {filteredMatches.map((match) => (
             <div
-              key={index}
+              key={match.id}
               className="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
             >
               <div className="flex items-center justify-between mb-4">
@@ -1837,9 +1931,9 @@ const TournamentDetail: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mockLiveCourts.map((court, index) => (
+        {mockLiveCourts.map((court) => (
           <div
-            key={index}
+            key={court.id}
             className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden"
           >
             <div className="relative">
@@ -1900,14 +1994,14 @@ const TournamentDetail: React.FC = () => {
   // ----------- RENDER -----------
   const inscritosCount =
     typeof tournament?.participantsCount === "number"
-      ? tournament.participantsCount
+      ? tournament.participantsCount!
       : mockRegistrations.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
       {user ? <DashboardHeader /> : <Navbar />}
 
-      {/* Hero Banner (mobile ganha margem para não ficar atrás do header) */}
+      {/* Hero Banner */}
       <div className="relative mt-16 md:mt-0 h-52 md:h-80 bg-gradient-to-br from-purple-900 via-purple-800 to-purple-700 overflow-hidden">
         <div className="absolute inset-0 bg-black bg-opacity-30"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-purple-900/50 to-transparent"></div>
@@ -1927,7 +2021,7 @@ const TournamentDetail: React.FC = () => {
                       onClick={handleClubClick}
                       className="hover:text-green-300"
                     >
-                      {tournament.mainClub}
+                      {tournament.mainClub || "Clube"}
                     </button>
                   </div>
 
@@ -1955,15 +2049,34 @@ const TournamentDetail: React.FC = () => {
                   <span>{inscritosCount} inscritos</span>
                 </div>
 
-                {/* CTA + Share no mobile (compacto) */}
-                {(isCreator || isAthlete || !user) && (
+                {/* CTA + Share no mobile */}
+                {isCreator ? (
                   <div className="mt-3 flex items-center gap-2 md:hidden">
-                    {isCreator ? (
-                      <button className="bg-accent-400 text-dark-900 px-4 py-2 text-sm rounded-lg font-semibold flex items-center shadow">
-                        <Edit2 size={16} className="mr-2" />
-                        Editar
-                      </button>
-                    ) : (
+                    <button
+                      onClick={() => setAddTeamModalOpen(true)}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm rounded-lg font-semibold flex items-center shadow"
+                    >
+                      <Plus size={16} className="mr-2" />
+                      Adicionar Atleta
+                    </button>
+                    <button
+                      onClick={() => navigate(`/tournament/${id}/edit`)}
+                      className="border-2 border-green-600 text-green-600 hover:bg-green-50 px-4 py-2 text-sm rounded-lg font-semibold flex items-center"
+                    >
+                      <Edit2 size={16} className="mr-2" />
+                      Editar
+                    </button>
+                    <button
+                      onClick={handleShare}
+                      className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+                      title="Compartilhar torneio"
+                    >
+                      <Share2 size={18} />
+                    </button>
+                  </div>
+                ) : (
+                  (isAthlete || !user) && (
+                    <div className="mt-3 flex items-center gap-2 md:hidden">
                       <button
                         onClick={() => {
                           if (!user) {
@@ -1978,16 +2091,15 @@ const TournamentDetail: React.FC = () => {
                         Inscrever-se
                         <ArrowUpRight size={16} className="ml-1" />
                       </button>
-                    )}
-
-                    <button
-                      onClick={handleShare}
-                      className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white"
-                      title="Compartilhar torneio"
-                    >
-                      <Share2 size={18} />
-                    </button>
-                  </div>
+                      <button
+                        onClick={handleShare}
+                        className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+                        title="Compartilhar torneio"
+                      >
+                        <Share2 size={18} />
+                      </button>
+                    </div>
+                  )
                 )}
               </div>
             </div>
@@ -1995,15 +2107,31 @@ const TournamentDetail: React.FC = () => {
         </div>
 
         {/* CTA desktop alinhado à direita */}
-        {(isCreator || isAthlete || !user) && (
-          <div className="hidden md:block absolute inset-x-0 bottom-4 z-10">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-end">
-              {isCreator ? (
-                <button className="group bg-gradient-to-r from-accent-500 to-accent-400 text-dark-900 hover:from-accent-400 hover:to-accent-300 px-6 py-3 rounded-xl font-bold text-lg transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5 flex items-center">
-                  <Edit2 size={20} className="mr-2" />
-                  Editar
+        <div className="hidden md:block absolute inset-x-0 bottom-4 z-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-end gap-2">
+            {isCreator ? (
+              <>
+                <button
+                  onClick={() => setAddTeamModalOpen(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-bold text-lg transition-all shadow-xl hover:shadow-2xl"
+                >
+                  <div className="flex items-center">
+                    <Plus size={20} className="mr-2" />
+                    Adicionar Atleta
+                  </div>
                 </button>
-              ) : (
+                <button
+                  onClick={() => navigate(`/tournament/${id}/edit`)}
+                  className="border-2 border-green-600 text-green-600 hover:bg-green-50 px-6 py-3 rounded-xl font-bold text-lg transition-colors"
+                >
+                  <div className="flex items-center">
+                    <Edit2 size={20} className="mr-2" />
+                    Editar
+                  </div>
+                </button>
+              </>
+            ) : (
+              (isAthlete || !user) && (
                 <button
                   onClick={() => {
                     if (!user) {
@@ -2013,7 +2141,7 @@ const TournamentDetail: React.FC = () => {
                       setSearchParams({ tab: "inscritos" });
                     }
                   }}
-                  className="group bg-gradient-to-r from-accent-500 to-accent-400 text-dark-900 hover:from-accent-400 hover:to-accent-300 px-6 py-3 rounded-xl font-bold text-lg transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5 flex items-center"
+                  className="group bg-gradient-to-r from-accent-500 to-accent-400 text-dark-900 hover:from-accent-400 hover:to-accent-300 px-6 py-3 rounded-xl font-bold text-lg transition-all shadow-xl hover:shadow-2xl flex items-center"
                 >
                   Inscrever-se
                   <ArrowUpRight
@@ -2021,17 +2149,16 @@ const TournamentDetail: React.FC = () => {
                     className="ml-2 group-hover:translate-x-1 transition-transform"
                   />
                 </button>
-              )}
-            </div>
+              )
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Tabs */}
       <div className="bg-white shadow-sm border-b border-gray-200 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            {/* Mobile: chips com wrap | Desktop: mesma UI anterior com scroll */}
             <div className="flex flex-wrap gap-2 md:gap-0 md:flex-nowrap md:overflow-x-auto">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
@@ -2060,7 +2187,7 @@ const TournamentDetail: React.FC = () => {
               })}
             </div>
 
-            {/* Share só no desktop aqui */}
+            {/* Share desktop */}
             <button
               onClick={handleShare}
               className="hidden md:flex items-center px-4 py-2 text-gray-600 hover:text-purple-600 transition-colors"
@@ -2103,7 +2230,12 @@ const TournamentDetail: React.FC = () => {
 
       {/* Main */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {renderContent()}
+        {activeTab === "informacoes" && renderInformacoes()}
+        {activeTab === "inscritos" && renderInscritos()}
+        {activeTab === "grupos" && renderGrupos()}
+        {activeTab === "jogos" && renderJogos()}
+        {activeTab === "resultados" && renderResultados()}
+        {activeTab === "ao-vivo" && renderAoVivo()}
       </div>
 
       {/* Modals */}

@@ -4,6 +4,13 @@ import { useNavigate } from "react-router-dom";
 import { Tournament } from "../types";
 import StatusBadge from "./StatusBadge";
 
+type ClubTournamentLS = {
+  id: string | number;
+  hasParticipantLimit?: boolean;
+  maxParticipants?: number | null;
+  club_id?: string;
+};
+
 interface TournamentCardProps {
   tournament: Tournament;
 }
@@ -136,16 +143,20 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
   // dados completos do torneio no LS (para obter club_id e limite)
   const clubTournaments = JSON.parse(
     localStorage.getItem("clubTournaments") || "[]"
+  ) as ClubTournamentLS[];
+
+  const tournamentData = clubTournaments.find(
+    (t) => String(t.id) === String(id)
   );
-  const tournamentData = clubTournaments.find((t: any) => t.id === id);
 
   // Limite somente quando:
   // - hasParticipantLimit === true
   // - maxParticipants é número finito
   const hasLimit =
-    Boolean(tournamentData?.hasParticipantLimit) &&
+    tournamentData?.hasParticipantLimit === true &&
     typeof tournamentData?.maxParticipants === "number" &&
-    Number.isFinite(tournamentData.maxParticipants);
+    Number.isFinite(tournamentData.maxParticipants) &&
+    tournamentData.maxParticipants > 0;
 
   const maxParticipants: number | null = hasLimit
     ? Number(tournamentData.maxParticipants)
