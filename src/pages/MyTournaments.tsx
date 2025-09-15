@@ -1,108 +1,153 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import DashboardHeader from '../components/DashboardHeader';
-import { Plus, Calendar, Users, Trophy, Edit2, Trash2, Eye, Search, Filter } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import DashboardHeader from "../components/DashboardHeader";
+import {
+  Plus,
+  Calendar,
+  Users,
+  Trophy,
+  Edit2,
+  Trash2,
+  Eye,
+  Search,
+} from "lucide-react";
 
 interface Tournament {
   id: string;
   name: string;
-  startDate: string;
-  endDate: string;
+  startDate: string; // ideal: "YYYY-MM-DD" (ou começo da string nessa forma)
+  endDate: string; // idem
   registrationFee: number;
   categories: string[];
   courts: string[];
   participantsCount: number;
-  status: 'open' | 'in-progress' | 'completed' | 'scheduled';
-  maxParticipants: number;
+  status: "open" | "in-progress" | "completed" | "scheduled";
+  maxParticipants: number; // pode vir 0 quando não há limite
+  hasParticipantLimit?: boolean; // novo: define se existe limite
+}
+
+/** Converte string de data para Date "pura" em UTC e formata pt-BR */
+function formatDateBRUTC(d?: string) {
+  if (!d) return "";
+  // extrai YYYY-MM-DD do início da string (ex.: "2025-09-20T00:00:00")
+  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) {
+    // fallback: usa Date normal, mas fixa timezone como UTC na hora de imprimir
+    const dt = new Date(d);
+    return isNaN(dt.getTime())
+      ? ""
+      : dt.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+  }
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const day = Number(m[3]);
+  const dt = new Date(Date.UTC(y, mo - 1, day));
+  return dt.toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
 const MyTournaments: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [filter, setFilter] = useState<'all' | 'open' | 'in-progress' | 'completed' | 'scheduled'>('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
+  const [filter, setFilter] = useState<
+    "all" | "open" | "in-progress" | "completed" | "scheduled"
+  >("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Load tournaments from localStorage
-    const savedTournaments = localStorage.getItem('clubTournaments');
+    const savedTournaments = localStorage.getItem("clubTournaments");
     if (savedTournaments) {
-      const parsedTournaments = JSON.parse(savedTournaments).map((tournament: any) => ({
-        ...tournament,
-        registrationFee: parseFloat(tournament.registrationFee) || 0,
-        participantsCount: parseInt(tournament.participantsCount) || 0,
-        maxParticipants: parseInt(tournament.maxParticipants) || 0
-      }));
-      setTournaments(parsedTournaments);
+      const parsed: Tournament[] = JSON.parse(savedTournaments).map(
+        (t: any) => ({
+          ...t,
+          // normaliza números
+          registrationFee: Number.isFinite(Number(t.registrationFee))
+            ? Number(t.registrationFee)
+            : 0,
+          participantsCount: Number.isFinite(Number(t.participantsCount))
+            ? Number(t.participantsCount)
+            : 0,
+          maxParticipants: Number.isFinite(Number(t.maxParticipants))
+            ? Number(t.maxParticipants)
+            : 0,
+          // mantém o boolean corretamente (pode vir undefined)
+          hasParticipantLimit: t?.hasParticipantLimit === true,
+        })
+      );
+      setTournaments(parsed);
     }
   }, []);
 
-  const filteredTournaments = tournaments.filter(tournament => {
-    const matchesStatus = filter === 'all' || tournament.status === filter;
-    const matchesSearch = searchTerm === '' || 
+  const filteredTournaments = tournaments.filter((tournament) => {
+    const matchesStatus = filter === "all" || tournament.status === filter;
+    const matchesSearch =
+      !searchTerm ||
       tournament.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDate = dateFilter === '' || 
-      tournament.startDate.includes(dateFilter);
-    
+    const matchesDate =
+      !dateFilter || (tournament.startDate || "").includes(dateFilter);
     return matchesStatus && matchesSearch && matchesDate;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open':
-        return 'bg-accent-100 text-accent-800';
-      case 'in-progress':
-        return 'bg-primary-100 text-primary-800';
-      case 'completed':
-        return 'bg-gray-100 text-gray-800';
-      case 'scheduled':
-        return 'bg-yellow-100 text-yellow-800';
+      case "open":
+        return "bg-accent-100 text-accent-800";
+      case "in-progress":
+        return "bg-primary-100 text-primary-800";
+      case "completed":
+        return "bg-gray-100 text-gray-800";
+      case "scheduled":
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'open':
-        return 'Inscrições Abertas';
-      case 'in-progress':
-        return 'Em Andamento';
-      case 'completed':
-        return 'Concluído';
-      case 'scheduled':
-        return 'Agendado';
+      case "open":
+        return "Inscrições Abertas";
+      case "in-progress":
+        return "Em Andamento";
+      case "completed":
+        return "Concluído";
+      case "scheduled":
+        return "Agendado";
       default:
-        return 'Desconhecido';
+        return "Desconhecido";
     }
   };
 
   const handleEditTournament = (tournamentId: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Navigate to edit tournament page
     navigate(`/edit-tournament/${tournamentId}`);
   };
 
-  const handleDeleteTournament = (tournamentId: string, e: React.MouseEvent) => {
+  const handleDeleteTournament = (
+    tournamentId: string,
+    e: React.MouseEvent
+  ) => {
     e.preventDefault();
     e.stopPropagation();
-    if (confirm('Tem certeza que deseja excluir este torneio?')) {
-      const updatedTournaments = tournaments.filter(t => t.id !== tournamentId);
-      setTournaments(updatedTournaments);
-      localStorage.setItem('clubTournaments', JSON.stringify(updatedTournaments));
+    if (confirm("Tem certeza que deseja excluir este torneio?")) {
+      const updated = tournaments.filter((t) => t.id !== tournamentId);
+      setTournaments(updated);
+      localStorage.setItem("clubTournaments", JSON.stringify(updated));
     }
   };
 
   return (
     <div className="min-h-screen bg-light">
       <DashboardHeader />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-dark-900">Meus Torneios</h1>
-            <p className="text-dark-600 mt-2">Gerencie todos os seus torneios</p>
+            <p className="text-dark-600 mt-2">
+              Gerencie todos os seus torneios
+            </p>
           </div>
           <Link
             to="/create-tournament"
@@ -113,13 +158,15 @@ const MyTournaments: React.FC = () => {
           </Link>
         </div>
 
-        {/* Filter Tabs */}
+        {/* Filtros */}
         <div className="bg-white rounded-xl shadow-lg mb-6 border border-gray-100 overflow-hidden">
-          {/* Search and Filters */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
                 <input
                   type="text"
                   placeholder="Buscar por nome do torneio..."
@@ -140,8 +187,8 @@ const MyTournaments: React.FC = () => {
               {(searchTerm || dateFilter) && (
                 <button
                   onClick={() => {
-                    setSearchTerm('');
-                    setDateFilter('');
+                    setSearchTerm("");
+                    setDateFilter("");
                   }}
                   className="px-4 py-3 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
@@ -150,24 +197,43 @@ const MyTournaments: React.FC = () => {
               )}
             </div>
           </div>
-          
-          {/* Status Tabs */}
+
+          {/* Abas de status */}
           <div className="border-b border-gray-200">
             <nav className="flex space-x-8 px-6">
               {[
-                { key: 'all', label: 'Todos', count: tournaments.length },
-                { key: 'open', label: 'Inscrições Abertas', count: tournaments.filter(t => t.status === 'open').length },
-                { key: 'scheduled', label: 'Agendados', count: tournaments.filter(t => t.status === 'scheduled').length },
-                { key: 'in-progress', label: 'Em Andamento', count: tournaments.filter(t => t.status === 'in-progress').length },
-                { key: 'completed', label: 'Concluídos', count: tournaments.filter(t => t.status === 'completed').length }
+                { key: "all", label: "Todos", count: tournaments.length },
+                {
+                  key: "open",
+                  label: "Inscrições Abertas",
+                  count: tournaments.filter((t) => t.status === "open").length,
+                },
+                {
+                  key: "scheduled",
+                  label: "Agendados",
+                  count: tournaments.filter((t) => t.status === "scheduled")
+                    .length,
+                },
+                {
+                  key: "in-progress",
+                  label: "Em Andamento",
+                  count: tournaments.filter((t) => t.status === "in-progress")
+                    .length,
+                },
+                {
+                  key: "completed",
+                  label: "Concluídos",
+                  count: tournaments.filter((t) => t.status === "completed")
+                    .length,
+                },
               ].map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => setFilter(tab.key as any)}
                   className={`py-4 px-1 border-b-2 font-medium text-sm ${
                     filter === tab.key
-                      ? 'border-primary-600 text-primary-600'
-                      : 'border-transparent text-dark-500 hover:text-dark-700 hover:border-gray-300'
+                      ? "border-primary-600 text-primary-600"
+                      : "border-transparent text-dark-500 hover:text-dark-700 hover:border-gray-300"
                   }`}
                 >
                   {tab.label} ({tab.count})
@@ -177,25 +243,23 @@ const MyTournaments: React.FC = () => {
           </div>
         </div>
 
-        {/* Tournaments List */}
+        {/* Lista */}
         {filteredTournaments.length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center border border-gray-100">
             <Trophy className="mx-auto text-gray-300 mb-4" size={64} />
             <h3 className="text-lg font-medium text-dark-900 mb-2">
-              {searchTerm || dateFilter 
-                ? 'Nenhum torneio encontrado' 
-                : filter === 'all' 
-                  ? 'Nenhum torneio criado' 
-                  : `Nenhum torneio ${getStatusText(filter).toLowerCase()}`}
+              {searchTerm || dateFilter
+                ? "Nenhum torneio encontrado"
+                : filter === "all"
+                ? "Nenhum torneio criado"
+                : `Nenhum torneio ${filter}`}
             </h3>
             <p className="text-dark-500 mb-6">
               {searchTerm || dateFilter
-                ? 'Tente ajustar os filtros de busca.'
-                : filter === 'all' 
-                  ? 'Comece criando seu primeiro torneio.' 
-                  : `Você não tem torneios ${getStatusText(filter).toLowerCase()}.`}
+                ? "Tente ajustar os filtros de busca."
+                : "Comece criando seu primeiro torneio."}
             </p>
-            {filter === 'all' && !searchTerm && !dateFilter && (
+            {!searchTerm && !dateFilter && (
               <Link
                 to="/create-tournament"
                 className="inline-flex items-center bg-gradient-to-r from-primary-900 to-primary-700 text-white px-6 py-3 rounded-lg hover:from-primary-800 hover:to-primary-600 transition-all duration-300 shadow-lg"
@@ -207,104 +271,131 @@ const MyTournaments: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTournaments.map((tournament) => (
-              <Link 
-                key={tournament.id} 
-                to={`/tournament/${tournament.id}`}
-                className="block"
-              >
-                <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all border border-gray-100 cursor-pointer transform hover:-translate-y-1">
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-lg font-semibold text-dark-900 line-clamp-2">
-                        {tournament.name}
-                      </h3>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(tournament.status)}`}>
-                        {getStatusText(tournament.status)}
-                      </span>
-                    </div>
+            {filteredTournaments.map((t) => {
+              const inscritos = Number.isFinite(t.participantsCount)
+                ? Math.max(0, Math.trunc(t.participantsCount))
+                : 0;
+              const max = Number.isFinite(t.maxParticipants)
+                ? Math.trunc(t.maxParticipants)
+                : 0;
+              const hasLimit = t.hasParticipantLimit === true && max > 0;
 
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-sm text-dark-600">
-                        <Calendar size={16} className="mr-2 text-primary-600" />
-                        {new Date(tournament.startDate).toLocaleDateString('pt-BR')} - {new Date(tournament.endDate).toLocaleDateString('pt-BR')}
-                      </div>
-                      <div className="flex items-center text-sm text-dark-600">
-                        <Users size={16} className="mr-2 text-primary-600" />
-                        {tournament.participantsCount} / {tournament.maxParticipants} participantes
-                      </div>
-                      <div className="flex items-center text-sm text-dark-600">
-                        <Trophy size={16} className="mr-2 text-primary-600" />
-                        R$ {tournament.registrationFee.toFixed(2)}
-                      </div>
-                    </div>
+              const inscritosLabel = hasLimit
+                ? `${inscritos} / ${max} participantes`
+                : `${inscritos} participantes`;
 
-                    <div className="mb-4">
-                      <p className="text-sm text-dark-600 mb-1">Categorias:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {tournament.categories.slice(0, 2).map((category, index) => (
-                          <span key={index} className="bg-primary-100 text-primary-700 px-2 py-1 rounded text-xs">
-                            {category}
-                          </span>
-                        ))}
-                        {tournament.categories.length > 2 && (
-                          <span className="bg-primary-100 text-primary-700 px-2 py-1 rounded text-xs">
-                            +{tournament.categories.length - 2}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+              const pct = hasLimit
+                ? Math.min(Math.round((inscritos / max) * 100), 100)
+                : 0;
 
-                    <div className="flex justify-between items-center">
-                      <div className="flex space-x-1">
-                        <button 
-                          className="p-2 text-dark-600 hover:text-primary-600 hover:bg-primary-50 rounded"
-                          title="Visualizar torneio"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            navigate(`/tournament/${tournament.id}`);
-                          }}
+              return (
+                <Link key={t.id} to={`/tournament/${t.id}`} className="block">
+                  <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all border border-gray-100 cursor-pointer transform hover:-translate-y-1">
+                    <div className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-lg font-semibold text-dark-900 line-clamp-2">
+                          {t.name}
+                        </h3>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                            t.status
+                          )}`}
                         >
-                          <Eye size={16} />
-                        </button>
-                        <button 
-                          className="p-2 text-dark-600 hover:text-accent-600 hover:bg-accent-50 rounded"
-                          onClick={(e) => handleEditTournament(tournament.id, e)}
-                          title="Editar torneio"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          className="p-2 text-dark-600 hover:text-red-600 hover:bg-red-50 rounded"
-                          onClick={(e) => handleDeleteTournament(tournament.id, e)}
-                          title="Deletar torneio"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                          {getStatusText(t.status)}
+                        </span>
                       </div>
-                      <div className="text-right">
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-accent-600 h-2 rounded-full"
-                            style={{ 
-                              width: tournament.hasParticipantLimit && tournament.maxParticipants 
-                                ? `${Math.min((tournament.participantsCount / tournament.maxParticipants) * 100, 100)}%`
-                                : '0%'
-                            }}
-                          ></div>
+
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center text-sm text-dark-600">
+                          <Calendar
+                            size={16}
+                            className="mr-2 text-primary-600"
+                          />
+                          {formatDateBRUTC(t.startDate)} -{" "}
+                          {formatDateBRUTC(t.endDate)}
                         </div>
-                        {tournament.hasParticipantLimit && tournament.maxParticipants && (
-                          <p className="text-xs text-dark-500 mt-1">
-                            {Math.round((tournament.participantsCount / tournament.maxParticipants) * 100)}% ocupado
-                          </p>
-                        )}
+                        <div className="flex items-center text-sm text-dark-600">
+                          <Users size={16} className="mr-2 text-primary-600" />
+                          {inscritosLabel}
+                        </div>
+                        <div className="flex items-center text-sm text-dark-600">
+                          <Trophy size={16} className="mr-2 text-primary-600" />
+                          R$ {t.registrationFee.toFixed(2)}
+                        </div>
+                      </div>
+
+                      <div className="mb-4">
+                        <p className="text-sm text-dark-600 mb-1">
+                          Categorias:
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {t.categories.slice(0, 2).map((c, i) => (
+                            <span
+                              key={i}
+                              className="bg-primary-100 text-primary-700 px-2 py-1 rounded text-xs"
+                            >
+                              {c}
+                            </span>
+                          ))}
+                          {t.categories.length > 2 && (
+                            <span className="bg-primary-100 text-primary-700 px-2 py-1 rounded text-xs">
+                              +{t.categories.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <div className="flex space-x-1">
+                          <button
+                            className="p-2 text-dark-600 hover:text-primary-600 hover:bg-primary-50 rounded"
+                            title="Visualizar torneio"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              navigate(`/tournament/${t.id}`);
+                            }}
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button
+                            className="p-2 text-dark-600 hover:text-accent-600 hover:bg-accent-50 rounded"
+                            onClick={(e) => handleEditTournament(t.id, e)}
+                            title="Editar torneio"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            className="p-2 text-dark-600 hover:text-red-600 hover:bg-red-50 rounded"
+                            onClick={(e) => handleDeleteTournament(t.id, e)}
+                            title="Deletar torneio"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+
+                        {/* Barra de ocupação somente com limite válido */}
+                        <div className="text-right">
+                          {hasLimit && (
+                            <>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div
+                                  className="bg-accent-600 h-2 rounded-full"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <p className="text-xs text-dark-500 mt-1">
+                                {pct}% ocupado
+                              </p>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

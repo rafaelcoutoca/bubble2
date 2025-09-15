@@ -32,17 +32,20 @@ const MONTHS_ABBR = [
   "Dez",
 ];
 
-/** Parse seguro:
- *  - "YYYY-MM-DD" => cria como UTC (não anda 1 dia em fusos negativos)
- *  - outras strings => new Date(...)
- */
 function parseDateInput(d?: string) {
   if (!d) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-    const [y, m, day] = d.split("-").map(Number);
-    return new Date(Date.UTC(y, m - 1, day));
-    // ↑ data "pura" em UTC
+
+  // 1) tenta extrair só a parte de data (YYYY-MM-DD) de qualquer string
+  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    const y = Number(m[1]),
+      mo = Number(m[2]),
+      day = Number(m[3]);
+    // cria uma data "pura" em UTC (não sofre deslocamento por fuso)
+    return new Date(Date.UTC(y, mo - 1, day));
   }
+
+  // 2) fallback: deixa o JS parsear (para strings com timezone real, ex: "...Z" ou "-03:00")
   const dt = new Date(d);
   return isNaN(dt.getTime()) ? null : dt;
 }
@@ -86,7 +89,6 @@ function getSportBadgeClasses(sport?: string) {
   if (s.includes("tênis") || s.includes("tenis"))
     return "bg-blue-100 text-blue-700 border-blue-200";
   if (s.includes("pickle")) return "bg-lime-100 text-lime-700 border-lime-200";
-  // default / padel
   return "bg-purple-100 text-purple-700 border-purple-200";
 }
 
@@ -140,7 +142,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
     }
   };
 
-  // dados completos do torneio no LS (para obter club_id e limite)
+  // Buscar dados complementares no LS
   const clubTournaments = JSON.parse(
     localStorage.getItem("clubTournaments") || "[]"
   ) as ClubTournamentLS[];
@@ -149,21 +151,24 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
     (t) => String(t.id) === String(id)
   );
 
-  // Limite somente quando:
-  // - hasParticipantLimit === true
-  // - maxParticipants é número finito
-  const hasLimit =
-    tournamentData?.hasParticipantLimit === true &&
-    typeof tournamentData?.maxParticipants === "number" &&
-    Number.isFinite(tournamentData.maxParticipants) &&
-    tournamentData.maxParticipants > 0;
+  // Detecção de limite de inscritos
+  // origem: LS (e se no futuro vier da API, você pode juntar com "?? tournament.maxParticipants")
+  const rawMax =
+    typeof tournamentData?.maxParticipants === "number"
+      ? tournamentData!.maxParticipants
+      : null;
 
-  const maxParticipants: number | null = hasLimit
-    ? Number(tournamentData.maxParticipants)
-    : null;
+  const validMax =
+    typeof rawMax === "number" && Number.isFinite(rawMax)
+      ? Math.trunc(rawMax)
+      : null;
+
+  const hasLimit =
+    tournamentData?.hasParticipantLimit === true && !!validMax && validMax > 0;
+
+  const maxParticipants: number | null = hasLimit ? validMax! : null;
 
   const clubId: string | undefined = tournamentData?.club_id;
-
   const canRegister = status === "open";
 
   const dateText =
@@ -188,6 +193,21 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
     if (clubId) navigate(`/clubes/${clubId}`);
   };
 
+  // ---- NOVO: cálculo seguro e label de inscritos ----
+  const inscritos =
+    typeof participantsCount === "number" && Number.isFinite(participantsCount)
+      ? Math.max(0, Math.trunc(participantsCount))
+      : 0;
+
+  const inscritosLabel = hasLimit
+    ? `${inscritos} / ${maxParticipants} inscritos`
+    : `${inscritos} inscritos`;
+
+  const ocupacaoPct =
+    hasLimit && maxParticipants! > 0
+      ? Math.min(Math.round((inscritos / maxParticipants!) * 100), 100)
+      : 0;
+
   return (
     <div
       role="button"
@@ -195,7 +215,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
       className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full border border-gray-100 group hover:-translate-y-1 cursor-pointer"
     >
       <div className="p-6 flex-1">
-        {/* Linha 1: Esporte (com fundo) + Status (somente texto) | Coração */}
+        {/* Esporte + Status | Favorito */}
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span
@@ -221,7 +241,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
           </button>
         </div>
 
-        {/* Título (sem sublinhado no hover) */}
+        {/* Título */}
         <h2 className="text-xl font-bold text-dark-800 mb-3 group-hover:text-primary-900 transition-colors">
           <button
             onClick={(e) => {
@@ -234,7 +254,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
           </button>
         </h2>
 
-        {/* Conteúdo */}
+        {/* Clube */}
         <div className="mb-3">
           <button
             onClick={goToClub}
@@ -245,6 +265,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
           </button>
         </div>
 
+        {/* Local */}
         <div className="flex items-center text-dark-600 mb-3">
           <MapPin size={18} className="mr-2 text-primary-600" />
           <span>
@@ -252,17 +273,16 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
           </span>
         </div>
 
+        {/* Data */}
         <div className="flex items-center text-dark-600 mb-3">
           <Calendar size={18} className="mr-2 text-primary-600" />
           <span>{dateText}</span>
         </div>
 
+        {/* Inscritos (NOVO TEXTO) */}
         <div className="flex items-center text-dark-600">
           <Users size={18} className="mr-2 text-primary-600" />
-          <span>
-            {participantsCount}
-            {hasLimit ? ` / ${maxParticipants}` : ""} inscritos
-          </span>
+          <span>{inscritosLabel}</span>
         </div>
       </div>
 
@@ -302,24 +322,17 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament }) => {
           </button>
         </div>
 
-        {hasLimit && (
+        {/* Barra de ocupação só com limite e max > 0 */}
+        {hasLimit && (maxParticipants as number) > 0 && (
           <div className="mt-3">
             <div className="flex justify-between text-xs text-dark-500 mb-1">
               <span>Ocupação</span>
-              <span>
-                {Math.round((participantsCount / (maxParticipants || 1)) * 100)}
-                % ocupado
-              </span>
+              <span>{ocupacaoPct}% ocupado</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
                 className="bg-accent-600 h-2 rounded-full transition-all duration-300"
-                style={{
-                  width: `${Math.min(
-                    (participantsCount / (maxParticipants || 1)) * 100,
-                    100
-                  )}%`,
-                }}
+                style={{ width: `${ocupacaoPct}%` }}
               />
             </div>
           </div>

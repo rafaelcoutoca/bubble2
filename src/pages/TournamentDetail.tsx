@@ -479,6 +479,64 @@ const TournamentDetail: React.FC = () => {
     );
   }
 
+  // ==============================
+  // Helpers de Data (corrige dia a menos)
+  // ==============================
+  // Parse local de "YYYY-MM-DD" (evita UTC)
+  const parseLocalDate = (s?: string) => {
+    if (!s) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+    if (!m) return new Date(s);
+    const [, y, mo, d] = m;
+    return new Date(Number(y), Number(mo) - 1, Number(d));
+  };
+
+  const formatDateRange = (startISO?: string, endISO?: string) => {
+    if (!startISO) return "";
+    const start = parseLocalDate(startISO)!;
+    const end = endISO ? parseLocalDate(endISO)! : start;
+
+    const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+    const shortMonth = (d: Date) =>
+      cap(
+        new Intl.DateTimeFormat("pt-BR", { month: "short" })
+          .format(d)
+          .replace(".", "")
+      );
+
+    const sameDay =
+      start.getFullYear() === end.getFullYear() &&
+      start.getMonth() === end.getMonth() &&
+      start.getDate() === end.getDate();
+
+    if (sameDay) {
+      return `${start.getDate()} ${shortMonth(start)} ${start.getFullYear()}`;
+    }
+
+    const sameMonth =
+      start.getFullYear() === end.getFullYear() &&
+      start.getMonth() === end.getMonth();
+
+    if (sameMonth) {
+      return `${start.getDate()} a ${end.getDate()} ${shortMonth(
+        end
+      )} ${end.getFullYear()}`;
+    }
+
+    const sameYear = start.getFullYear() === end.getFullYear();
+    if (sameYear) {
+      return `${start.getDate()} ${shortMonth(
+        start
+      )} a ${end.getDate()} ${shortMonth(end)} ${end.getFullYear()}`;
+    }
+
+    return `${start.getDate()} ${shortMonth(
+      start
+    )} ${start.getFullYear()} a ${end.getDate()} ${shortMonth(
+      end
+    )} ${end.getFullYear()}`;
+  };
+
   // Tabs
   const tabs: { id: string; name: string; icon: LucideIcon }[] = [
     { id: "informacoes", name: "Informações", icon: Info },
@@ -765,53 +823,7 @@ const TournamentDetail: React.FC = () => {
     },
   ];
 
-  // Helpers
-  const formatDateRange = (startISO?: string, endISO?: string) => {
-    if (!startISO) return "";
-    const start = new Date(startISO);
-    const end = endISO ? new Date(endISO) : start;
-
-    const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
-    const shortMonth = (d: Date) =>
-      cap(
-        new Intl.DateTimeFormat("pt-BR", { month: "short" })
-          .format(d)
-          .replace(".", "")
-      );
-
-    const sameDay =
-      start.getFullYear() === end.getFullYear() &&
-      start.getMonth() === end.getMonth() &&
-      start.getDate() === end.getDate();
-
-    if (sameDay) {
-      return `${start.getDate()} ${shortMonth(start)} ${start.getFullYear()}`;
-    }
-
-    const sameMonth =
-      start.getFullYear() === end.getFullYear() &&
-      start.getMonth() === end.getMonth();
-
-    if (sameMonth) {
-      return `${start.getDate()} a ${end.getDate()} ${shortMonth(
-        end
-      )} ${end.getFullYear()}`;
-    }
-
-    const sameYear = start.getFullYear() === end.getFullYear();
-    if (sameYear) {
-      return `${start.getDate()} ${shortMonth(
-        start
-      )} a ${end.getDate()} ${shortMonth(end)} ${end.getFullYear()}`;
-    }
-
-    return `${start.getDate()} ${shortMonth(
-      start
-    )} ${start.getFullYear()} a ${end.getDate()} ${shortMonth(
-      end
-    )} ${end.getFullYear()}`;
-  };
-
+  // Helpers extras
   const getFilteredRegistrations = (): Registration[] => {
     return mockRegistrations.filter((reg) => {
       const matchesCategory =
@@ -899,6 +911,8 @@ const TournamentDetail: React.FC = () => {
         : mockRegistrations.length;
 
     const openNewTab = (url: string) => window.open(url, "_blank", "noopener");
+
+    const startLocal = parseLocalDate(tournament.startDate);
 
     return (
       <div className="lg:col-span-1">
@@ -990,10 +1004,10 @@ const TournamentDetail: React.FC = () => {
             <h4 className="font-semibold text-gray-900 mb-2">Data do Evento</h4>
             <div className="bg-purple-50 rounded-lg p-3 text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {new Date(tournament.startDate).getDate()}
+                {startLocal?.getDate()}
               </div>
               <div className="text-sm text-purple-600">
-                {new Date(tournament.startDate).toLocaleDateString("pt-BR", {
+                {startLocal?.toLocaleDateString("pt-BR", {
                   month: "short",
                   year: "numeric",
                 })}
@@ -1043,9 +1057,9 @@ const TournamentDetail: React.FC = () => {
                         Início das Inscrições
                       </p>
                       <p className="text-gray-600">
-                        {new Date(tournament.startDate).toLocaleDateString(
-                          "pt-BR"
-                        )}
+                        {parseLocalDate(
+                          tournament.startDate
+                        )?.toLocaleDateString("pt-BR")}
                       </p>
                     </div>
                   </div>
@@ -1056,9 +1070,9 @@ const TournamentDetail: React.FC = () => {
                         Fim das Inscrições
                       </p>
                       <p className="text-gray-600">
-                        {new Date(
+                        {parseLocalDate(
                           tournament.endDate || tournament.startDate
-                        ).toLocaleDateString("pt-BR")}
+                        )?.toLocaleDateString("pt-BR")}
                       </p>
                     </div>
                   </div>
@@ -1069,9 +1083,9 @@ const TournamentDetail: React.FC = () => {
                         Data do Torneio
                       </p>
                       <p className="text-gray-600">
-                        {new Date(tournament.startDate).toLocaleDateString(
-                          "pt-BR"
-                        )}
+                        {parseLocalDate(
+                          tournament.startDate
+                        )?.toLocaleDateString("pt-BR")}
                       </p>
                     </div>
                   </div>
@@ -1124,7 +1138,7 @@ const TournamentDetail: React.FC = () => {
                                 {category}
                               </td>
                               <td className="px-4 py-3 text-green-600 font-bold">
-                                R${" "}
+                                R{"$ "}
                                 {tournament.registrationFee?.toFixed(2) ??
                                   "0,00"}
                               </td>
