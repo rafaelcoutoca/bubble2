@@ -321,8 +321,8 @@ const TournamentDetail: React.FC = () => {
                 </h2>
                 
                 {/* Filtros e Botão Adicionar Dupla */}
-                <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-                  <div className="flex gap-2">
+                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center w-full md:w-auto">
+                  <div className="flex gap-2 items-center">
                     {/* Filtro por Categoria */}
                     <select
                       value={selectedCategory}
@@ -349,8 +349,8 @@ const TournamentDetail: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Busca por Nome (área reduzida) */}
-                  <div className="relative flex-1 md:w-64">
+                  {/* Busca por Nome */}
+                  <div className={`relative ${isOwner ? 'flex-1 md:w-48' : 'flex-1 md:w-64'}`}>
                     <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                       type="text"
