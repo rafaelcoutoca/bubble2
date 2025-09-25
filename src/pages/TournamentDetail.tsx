@@ -320,43 +320,41 @@ const TournamentDetail: React.FC = () => {
                   Participantes Inscritos ({filteredParticipants.length})
                 </h2>
                 
-                {/* Filtros e Botão Adicionar Dupla */}
-                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center w-full md:w-auto">
-                  <div className="flex gap-2 items-center">
-                    {/* Filtro por Categoria */}
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                {/* Filtros e Controles */}
+                <div className="flex flex-col md:flex-row gap-3 items-start md:items-center w-full md:w-auto">
+                  {/* Filtro por Categoria */}
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 whitespace-nowrap"
+                  >
+                    <option value="all">Todas as Categorias</option>
+                    {tournament.categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Botão Adicionar Dupla (apenas para o dono) */}
+                  {isOwner && (
+                    <button
+                      onClick={handleAddParticipant}
+                      className="bg-gradient-to-r from-primary-900 to-primary-700 text-white px-4 py-2 rounded-lg hover:from-primary-800 hover:to-primary-600 transition-all duration-300 flex items-center font-semibold shadow-lg whitespace-nowrap"
                     >
-                      <option value="all">Todas as Categorias</option>
-                      {tournament.categories.map((category) => (
-                        <option key={category} value={category}>
-                          {category}
-                        </option>
-                      ))}
-                    </select>
+                      <UserPlus size={16} className="mr-2" />
+                      Adicionar Dupla
+                    </button>
+                  )}
 
-                    {/* Botão Adicionar Dupla (apenas para o dono) */}
-                    {isOwner && (
-                      <button
-                        onClick={handleAddParticipant}
-                        className="bg-gradient-to-r from-primary-900 to-primary-700 text-white px-4 py-2 rounded-lg hover:from-primary-800 hover:to-primary-600 transition-all duration-300 flex items-center font-semibold shadow-lg whitespace-nowrap"
-                      >
-                        <UserPlus size={16} className="mr-2" />
-                        Adicionar Dupla
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Busca por Nome */}
-                  <div className={`relative ${isOwner ? 'flex-1 md:w-48' : 'flex-1 md:w-64'}`}>
+                  {/* Busca por Nome - área reduzida quando há botão Adicionar Dupla */}
+                  <div className={`relative ${isOwner ? 'w-full md:w-40' : 'w-full md:w-64'}`}>
                     <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                       type="text"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Buscar por nome..."
+                      placeholder="Buscar..."
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
